@@ -134,7 +134,7 @@ dependencies {
   // TODO: check for an openjfx-monocle release aligned with JavaFX 25
   testImplementation("org.testfx:openjfx-monocle:21.0.2")
 
-  jacocoRuntime("org.jacoco:org.jacoco.agent:0.8.10")
+  jacocoRuntime("org.jacoco:org.jacoco.agent:0.8.13")
 }
 
 // # Monaco Editor (embedded code editor for user subroutines)
@@ -218,11 +218,29 @@ tasks.test {
   useJUnitPlatform()
   finalizedBy(tasks.jacocoTestReport)
   ignoreFailures = ignoreTestFailures
-  // Headless rendering for CI (no display server required)
+  // Headless rendering for CI (no display server required).
+  // testfx.headless on its own does not select Monocle; the glass/monocle/prism
+  // properties below are what actually enable the headless GL pipeline.
   systemProperty("testfx.headless", "true")
+  systemProperty("glass.platform", "Monocle")
+  systemProperty("monocle.platform", "Headless")
+  systemProperty("prism.order", "sw")
+  systemProperty("java.awt.headless", "true")
+
+  // openjfx-monocle 21.x reaches into JavaFX-internal Glass packages that
+  // JavaFX 25 no longer exports to the unnamed module. Open them explicitly
+  // until an openjfx-monocle release aligned with JavaFX 25 is available.
+  jvmArgs(
+      "--add-exports=javafx.base/com.sun.javafx.logging=ALL-UNNAMED",
+      "--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED",
+      "--add-exports=javafx.graphics/com.sun.glass.ui.delegate=ALL-UNNAMED",
+      "--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED",
+      "--add-exports=javafx.graphics/com.sun.javafx.util=ALL-UNNAMED",
+      "--add-opens=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED",
+  )
 }
 
-jacoco { toolVersion = "0.8.10" }
+jacoco { toolVersion = "0.8.13" }
 
 tasks.jacocoTestReport {
   dependsOn(tasks.test)
