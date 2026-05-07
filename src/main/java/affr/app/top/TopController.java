@@ -49,6 +49,23 @@ public final class TopController {
         .setCellFactory(
             lv ->
                 new ListCell<>() {
+                  {
+                    hoverProperty()
+                        .addListener(
+                            (obs, old, hovered) -> {
+                              if (!isSelected()) {
+                                setStyle(hovered ? "-fx-background-color: #eaf4ff;" : "");
+                              }
+                            });
+                    selectedProperty()
+                        .addListener(
+                            (obs, old, selected) -> {
+                              if (selected || !isHover()) {
+                                setStyle("");
+                              }
+                            });
+                  }
+
                   @Override
                   protected void updateItem(@Nullable TopCategory item, boolean empty) {
                     super.updateItem(item, empty);
