@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import affr.app.AppConfig.Profile;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ final class AppConfigTest {
   void defaultsApplyWhenNoArgsGiven() {
     AppConfig cfg = AppConfig.parse(List.of());
 
-    assertEquals("release", cfg.profile());
+    assertEquals(Profile.RELEASE, cfg.profile());
     assertNull(cfg.tutorialDir());
     assertFalse(cfg.isDebug());
   }
@@ -30,16 +31,32 @@ final class AppConfigTest {
   void profileEqualsForm() {
     AppConfig cfg = AppConfig.parse(List.of("--profile=debug"));
 
-    assertEquals("debug", cfg.profile());
+    assertEquals(Profile.DEBUG, cfg.profile());
     assertTrue(cfg.isDebug());
   }
 
   @Test
   void profileSpaceSeparatedForm() {
-    AppConfig cfg = AppConfig.parse(List.of("--profile", "staging"));
+    AppConfig cfg = AppConfig.parse(List.of("--profile", "debug"));
 
-    assertEquals("staging", cfg.profile());
+    assertEquals(Profile.DEBUG, cfg.profile());
+    assertTrue(cfg.isDebug());
+  }
+
+  @Test
+  void unknownProfileFallsBackToRelease() {
+    AppConfig cfg = AppConfig.parse(List.of("--profile=staging"));
+
+    assertEquals(Profile.RELEASE, cfg.profile());
     assertFalse(cfg.isDebug());
+  }
+
+  @Test
+  void profileKeyIsCaseInsensitive() {
+    AppConfig cfg = AppConfig.parse(List.of("--profile=DEBUG"));
+
+    assertEquals(Profile.DEBUG, cfg.profile());
+    assertTrue(cfg.isDebug());
   }
 
   @Test
@@ -60,7 +77,7 @@ final class AppConfigTest {
   void unrecognisedArgumentsAreSilentlyIgnored() {
     AppConfig cfg = AppConfig.parse(List.of("--unknown", "value", "--profile=debug"));
 
-    assertEquals("debug", cfg.profile());
+    assertEquals(Profile.DEBUG, cfg.profile());
     assertNull(cfg.tutorialDir());
   }
 
@@ -69,14 +86,14 @@ final class AppConfigTest {
     // "--profile" as the last token has no value — must not throw, defaults retained.
     AppConfig cfg = AppConfig.parse(List.of("--profile"));
 
-    assertEquals("release", cfg.profile());
+    assertEquals(Profile.RELEASE, cfg.profile());
   }
 
   @Test
   void multipleFlagsCombine() {
     AppConfig cfg = AppConfig.parse(List.of("--profile=debug", "--tutorial-dir", "/opt/tut"));
 
-    assertEquals("debug", cfg.profile());
+    assertEquals(Profile.DEBUG, cfg.profile());
     assertEquals(Path.of("/opt/tut"), cfg.tutorialDir());
     assertTrue(cfg.isDebug());
   }
@@ -85,7 +102,7 @@ final class AppConfigTest {
   void laterProfileFlagOverridesEarlier() {
     AppConfig cfg = AppConfig.parse(List.of("--profile=debug", "--profile=release"));
 
-    assertEquals("release", cfg.profile());
+    assertEquals(Profile.RELEASE, cfg.profile());
     assertFalse(cfg.isDebug());
   }
 }

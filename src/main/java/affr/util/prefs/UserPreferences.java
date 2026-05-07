@@ -27,12 +27,36 @@ public final class UserPreferences {
   private static final Path PREFS_FILE = APP_DIR.resolve("preferences.properties");
 
   private static final String KEY_LANGUAGE = "language";
+  private static final String KEY_WINDOW_WIDTH = "window.width";
+  private static final String KEY_WINDOW_HEIGHT = "window.height";
+  private static final String KEY_WINDOW_X = "window.x";
+  private static final String KEY_WINDOW_Y = "window.y";
+
   private static final Locale DEFAULT_LOCALE = Locale.ENGLISH;
+  public static final double DEFAULT_WINDOW_WIDTH = 1200;
+  public static final double DEFAULT_WINDOW_HEIGHT = 720;
 
+  private final Path prefsFile;
   private Locale locale;
+  private double windowWidth;
+  private double windowHeight;
+  /** {@code NaN} means no saved position — the OS should place the window. */
+  private double windowX;
+  private double windowY;
 
-  private UserPreferences(Locale locale) {
+  private UserPreferences(
+      Path prefsFile,
+      Locale locale,
+      double windowWidth,
+      double windowHeight,
+      double windowX,
+      double windowY) {
+    this.prefsFile = prefsFile;
     this.locale = locale;
+    this.windowWidth = windowWidth;
+    this.windowHeight = windowHeight;
+    this.windowX = windowX;
+    this.windowY = windowY;
   }
 
   /**
@@ -40,14 +64,28 @@ public final class UserPreferences {
    * is absent or unreadable.
    */
   public static UserPreferences load() {
+    return loadFrom(PREFS_FILE);
+  }
+
+  /**
+   * Loads preferences from the given {@code prefsFile}. Returns defaults if the file is absent or
+   * unreadable. Package-private to allow tests to supply a temporary file.
+   */
+  static UserPreferences loadFrom(Path prefsFile) {
     Properties props = new Properties();
-    if (Files.exists(PREFS_FILE)) {
-      try (InputStream in = Files.newInputStream(PREFS_FILE)) {
+    if (Files.exists(prefsFile)) {
+      try (InputStream in = Files.newInputStream(prefsFile)) {
         props.load(in);
       } catch (IOException ignored) {
       }
     }
-    return new UserPreferences(parseLocale(props.getProperty(KEY_LANGUAGE)));
+    return new UserPreferences(
+        prefsFile,
+        parseLocale(props.getProperty(KEY_LANGUAGE)),
+        parsePositiveDouble(props.getProperty(KEY_WINDOW_WIDTH), DEFAULT_WINDOW_WIDTH),
+        parsePositiveDouble(props.getProperty(KEY_WINDOW_HEIGHT), DEFAULT_WINDOW_HEIGHT),
+        parseFiniteDouble(props.getProperty(KEY_WINDOW_X)),
+        parseFiniteDouble(props.getProperty(KEY_WINDOW_Y)));
   }
 
   /** Returns the saved UI locale. */
@@ -60,13 +98,58 @@ public final class UserPreferences {
     this.locale = locale;
   }
 
-  /** Writes current preferences to {@code ~/.affr/preferences.properties}. */
+  /** Returns the saved main-window width in pixels. */
+  public double windowWidth() {
+    return windowWidth;
+  }
+
+  /** Returns the saved main-window height in pixels. */
+  public double windowHeight() {
+    return windowHeight;
+  }
+
+  /**
+   * Returns the saved main-window X position, or {@link Double#NaN} if no position has been saved
+   * yet (the OS should choose the initial placement).
+   */
+  public double windowX() {
+    return windowX;
+  }
+
+  /**
+   * Returns the saved main-window Y position, or {@link Double#NaN} if no position has been saved
+   * yet (the OS should choose the initial placement).
+   */
+  public double windowY() {
+    return windowY;
+  }
+
+  /** Updates the in-memory window size. Call {@link #save()} to persist the change. */
+  public void setWindowSize(double width, double height) {
+    this.windowWidth = width;
+    this.windowHeight = height;
+  }
+
+  /**
+   * Updates the in-memory window position. Use {@link Double#NaN} for either coordinate to let the
+   * OS decide that axis. Call {@link #save()} to persist the change.
+   */
+  public void setWindowPosition(double x, double y) {
+    this.windowX = x;
+    this.windowY = y;
+  }
+
+  /** Writes current preferences to the file this instance was loaded from. */
   public void save() {
     try {
-      Files.createDirectories(APP_DIR);
+      Files.createDirectories(prefsFile.getParent());
       Properties props = new Properties();
       props.setProperty(KEY_LANGUAGE, locale.getLanguage());
-      try (OutputStream out = Files.newOutputStream(PREFS_FILE)) {
+      props.setProperty(KEY_WINDOW_WIDTH, String.valueOf(windowWidth));
+      props.setProperty(KEY_WINDOW_HEIGHT, String.valueOf(windowHeight));
+      if (Double.isFinite(windowX)) props.setProperty(KEY_WINDOW_X, String.valueOf(windowX));
+      if (Double.isFinite(windowY)) props.setProperty(KEY_WINDOW_Y, String.valueOf(windowY));
+      try (OutputStream out = Files.newOutputStream(prefsFile)) {
         props.store(out, "AFFr user preferences — do not edit while the app is running");
       }
     } catch (IOException ignored) {
@@ -79,5 +162,30 @@ public final class UserPreferences {
       case "ja" -> Locale.JAPANESE;
       default -> Locale.ENGLISH;
     };
+  }
+
+  /** Parses a positive-only double (used for width/height). Returns {@code fallback} on failure. */
+  private static double parsePositiveDouble(@Nullable String value, double fallback) {
+    if (value == null || value.isBlank()) return fallback;
+    try {
+      double d = Double.parseDouble(value);
+      return Double.isFinite(d) && d > 0 ? d : fallback;
+    } catch (NumberFormatException e) {
+      return fallback;
+    }
+  }
+
+  /**
+   * Parses any finite double (used for X/Y position, which may be negative on multi-monitor
+   * setups). Returns {@link Double#NaN} on failure or if the value is not finite.
+   */
+  private static double parseFiniteDouble(@Nullable String value) {
+    if (value == null || value.isBlank()) return Double.NaN;
+    try {
+      double d = Double.parseDouble(value);
+      return Double.isFinite(d) ? d : Double.NaN;
+    } catch (NumberFormatException e) {
+      return Double.NaN;
+    }
   }
 }

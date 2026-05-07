@@ -1,14 +1,16 @@
 package affr.app;
 
 import affr.app.top.TopController;
-import affr.util.prefs.UserPreferences;
 import affr.fx.viewmodel.top.TopViewModel;
+import affr.util.prefs.UserPreferences;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Objects;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /**
@@ -20,9 +22,6 @@ import javafx.stage.Stage;
  * never see {@link AppConfig} or this service directly; ViewModels see only what they need.
  */
 public final class NavigationService {
-
-  private static final double INITIAL_WIDTH = 1200;
-  private static final double INITIAL_HEIGHT = 720;
 
   private final Stage stage;
   private final AppConfig config;
@@ -47,13 +46,49 @@ public final class NavigationService {
     TopController controller = loader.getController();
     controller.init(viewModel, prefs);
 
-    Scene scene = new Scene(root, INITIAL_WIDTH, INITIAL_HEIGHT);
+    Scene scene = new Scene(root, prefs.windowWidth(), prefs.windowHeight());
     stage.setTitle("AFFr");
     stage.setScene(scene);
+
+    // Save window bounds when the user closes the window.
+    stage.setOnHiding(
+        e -> {
+          double w = stage.getWidth();
+          double h = stage.getHeight();
+          if (Double.isFinite(w) && w > 0 && Double.isFinite(h) && h > 0) {
+            prefs.setWindowSize(w, h);
+            prefs.setWindowPosition(stage.getX(), stage.getY());
+            prefs.save();
+          }
+        });
+
     stage.show();
+
+    // Restore saved position after show() — applying it before show() is overridden by
+    // the OS window manager on macOS. Skip if not yet saved or outside all active screens.
+    if (isOnScreen(prefs.windowX(), prefs.windowY())) {
+      stage.setX(prefs.windowX());
+      stage.setY(prefs.windowY());
+    }
   }
 
   public AppConfig config() {
     return config;
+  }
+
+  /**
+   * Returns {@code true} if the point ({@code x}, {@code y}) falls within the visual bounds of at
+   * least one currently connected screen.
+   *
+   * <p>Used to guard against restoring a window position that was saved on a monitor that is no
+   * longer available, which would otherwise leave the window inaccessible off-screen.
+   */
+  private static boolean isOnScreen(double x, double y) {
+    if (!Double.isFinite(x) || !Double.isFinite(y)) return false;
+    for (Screen screen : Screen.getScreens()) {
+      Rectangle2D bounds = screen.getVisualBounds();
+      if (bounds.contains(x, y)) return true;
+    }
+    return false;
   }
 }
