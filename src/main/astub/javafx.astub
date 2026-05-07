@@ -1,0 +1,20 @@
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.initialization.qual.UnknownInitialization;
+
+package javafx.scene.control;
+class Dialog<R> {
+    // 355
+    final void close(@UnknownInitialization Dialog<R> this);
+    // 569
+    final DialogPane getDialogPane(@UnknownInitialization Dialog<R> this);
+    // 573
+    final void setDialogPane(@UnknownInitialization Dialog<R> this, DialogPane value);
+    // 721
+    final void setResultConverter(@UnknownInitialization Dialog<R> this, Callback<ButtonType, R> value);
+    // 731
+    final ReadOnlyBooleanProperty showingProperty(@UnknownInitialization Dialog<R> this);
+    // 770
+    final void setResizable(@UnknownInitialization Dialog<R> this, boolean resizable);
+    // 907
+    final void setOnShowing(@UnknownInitialization Dialog<R> this, EventHandler<DialogEvent> value);
+}

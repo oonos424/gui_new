@@ -1,0 +1,2 @@
+# Formatting-only commits that should be ignored by git blame.
+# Add commit hashes here when a commit does nothing but reformat code.

@@ -1,0 +1,23 @@
+#!/usr/bin/env -S uv run python
+
+from subprocess import run
+
+
+def main() -> None:
+    run("uvx pre-commit install", shell=True, check=True)
+    run(
+        "git submodule update --init --recursive",
+        shell=True,
+        check=True,
+    )
+    run(
+        "git config --local blame.ignoreRevsFile .git-blame-ignore-revs",
+        shell=True,
+        check=True,
+    )
+    print(cmd := "git config --local blame.ignoreRevsFile", "=>", end=" ", flush=True)
+    run(cmd, shell=True, check=True)
+
+
+if __name__ == "__main__":
+    main()

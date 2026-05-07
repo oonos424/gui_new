@@ -1,0 +1,2 @@
+
+uvx pre-commit install

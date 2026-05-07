@@ -1,0 +1,56 @@
+# IDE
+.vscode/
+.classpath
+.project
+.settings/
+*~
+*#
+
+# Gradle
+.gradle
+/build/
+/buildSrc/build/
+
+# npm / Monaco Editor
+node_modules/
+/src/main/resources/affr/app/editor/monaco/vs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+dist/
+*.egg-info/
+.eggs/
+.env
+.venv
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pypirc
+
+# uv
+# uv.lock is intentionally committed for reproducibility
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+
+# Misc
+/java_pid*.hprof
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
+
+# Agent instructions (local only)
+Agent.md

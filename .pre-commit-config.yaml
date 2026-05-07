@@ -1,0 +1,59 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+-   repo: local
+    hooks:
+    -   id: ruff-check
+        name: Check python code by ruff (https://docs.astral.sh/ruff/rules/)
+        description: "Run 'ruff' for extremely fast Python linting"
+        language: system
+        entry: uv run ruff check --fix
+        types_or: [python, pyi]
+    -   id: ruff-format
+        name: Format python code by ruff (https://docs.astral.sh/ruff/rules/)
+        description: "Run 'ruff format' for extremely fast Python formatting"
+        language: system
+        entry: uv run ruff format
+        types_or: [python, pyi]
+    -   id: google-java-format
+        name: Format java code by https://github.com/google/google-java-format
+        language: system
+        entry: cs
+        args:
+            - launch
+            - com.google.googlejavaformat:google-java-format:1.28.0
+            - --main=com.google.googlejavaformat.java.Main
+            - --java-opt=--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+            - --java-opt=--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+            - --java-opt=--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+            - --java-opt=--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
+            - --java-opt=--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+            - --
+            - --replace
+        types_or: [java]
+    -   id: ktfmt
+        name: Format kotlin code by https://github.com/facebook/ktfmt
+        language: system
+        entry: cs
+        args:
+            - launch
+            - com.facebook:ktfmt:0.61
+            - --
+        types_or: [kotlin]
+    -   id: fxml-format
+        name: Format fxml by script
+        language: system
+        entry: uv run --script script/fxml.py
+        args:
+            - format
+            - --indent=2
+            - --jfx-version=25.0
+            - --
+        files: \.fxml$
