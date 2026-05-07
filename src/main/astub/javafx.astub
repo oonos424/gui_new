@@ -1,6 +1,16 @@
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 
+// FXMLLoader.load() returns non-null when the FXML document has a root element, which is the
+// universal case in this project. Marking as non-null avoids pervasive null-check noise at
+// every call site; a null root would cause a NullPointerException before reaching any
+// application code regardless.
+package javafx.fxml;
+class FXMLLoader {
+    <T> T load() throws java.io.IOException;
+    <T> T getController();
+}
+
 package javafx.scene.control;
 class Dialog<R> {
     // 355

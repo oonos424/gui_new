@@ -87,11 +87,9 @@ application { mainClass.set("affr.app.AFFrMain") }
 
 tasks.withType<JavaCompile> { options.encoding = "UTF-8" }
 
-// FXML files co-located with Java source are copied into resources at build time
-tasks.processResources {
-  dependsOn(copyMonacoIntoResources)
-  from("src/main/java") { exclude("**/*.java", "**/.gitignore") }
-}
+// FXML and CSS live under src/main/resources/ following standard Gradle/JavaFX layout.
+// Monaco Editor assets are copied in by a separate task.
+tasks.processResources { dependsOn(copyMonacoIntoResources) }
 
 // NOTE: Update jvmTarget when upgrading the Java toolchain
 val jvmTarget = "25"

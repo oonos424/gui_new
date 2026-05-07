@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+
+<BorderPane
+    xmlns:fx="http://javafx.com/fxml"
+    fx:controller="affr.app.top.TopController"
+    stylesheets="@top.css">
+
+  <!-- ── HEADER (top, 50 px) ─────────────────────────────────────────── -->
+  <top>
+    <BorderPane prefHeight="50.0" styleClass="app-header">
+      <left>
+        <Label text="AFFr" styleClass="app-title" BorderPane.alignment="CENTER">
+          <BorderPane.margin>
+            <Insets left="12.0"/>
+          </BorderPane.margin>
+        </Label>
+      </left>
+      <right>
+        <HBox alignment="CENTER_RIGHT" spacing="4.0">
+          <BorderPane.margin>
+            <Insets right="8.0"/>
+          </BorderPane.margin>
+          <Separator orientation="VERTICAL"/>
+          <MenuButton text="Menu" styleClass="header-menu-button">
+            <items>
+              <MenuItem text="Setting"/>
+              <MenuItem text="About"/>
+            </items>
+          </MenuButton>
+        </HBox>
+      </right>
+    </BorderPane>
+  </top>
+
+  <!-- ── MANAGER (left — category selector) ─────────────────────────── -->
+  <left>
+    <ListView fx:id="categoryList" styleClass="category-list"/>
+  </left>
+
+  <!-- ── VIEWER (center — swapped at runtime by TopController) ───────── -->
+  <center>
+    <StackPane fx:id="viewerPane" styleClass="viewer-pane"/>
+  </center>
+
+</BorderPane>

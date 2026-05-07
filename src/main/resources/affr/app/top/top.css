@@ -1,0 +1,53 @@
+/* ── Project Browser (top screen) styles ──────────────────────────────── */
+
+/* Header bar */
+.app-header {
+    -fx-background-color: #2b2b2b;
+    -fx-border-color: #444;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-title {
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.header-menu-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.header-menu-button:hover {
+    -fx-background-color: #3c3c3c;
+}
+
+/* Category selector (left panel) */
+.category-list {
+    -fx-background-color: #f5f5f5;
+    -fx-border-color: #ddd;
+    -fx-border-width: 0 1 0 0;
+    -fx-pref-width: 180px;
+}
+
+.category-list .list-cell {
+    -fx-padding: 10 16 10 16;
+    -fx-font-size: 20px;
+    -fx-background-color: transparent;
+}
+
+.category-list .list-cell:selected {
+    -fx-background-color: #d0e8ff;
+    -fx-text-fill: #1a1a1a;
+}
+
+.category-list .list-cell:hover:!selected {
+    -fx-background-color: #e8e8e8;
+}
+
+/* Viewer pane (centre) */
+.viewer-pane {
+    -fx-background-color: #ffffff;
+}
