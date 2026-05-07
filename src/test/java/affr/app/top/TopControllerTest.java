@@ -1,9 +1,11 @@
 package affr.app.top;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import affr.data.DataStore;
 import affr.util.prefs.UserPreferences;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
@@ -54,7 +56,8 @@ final class TopControllerTest {
 
     controller = loader.getController();
     viewModel = new TopViewModel();
-    controller.init(viewModel, UserPreferences.load());
+    DataStore dataStore = new DataStore(UserPreferences.APP_DIR);
+    controller.init(viewModel, UserPreferences.load(), dataStore);
 
     categoryList = (ListView<TopCategory>) root.lookup("#categoryList");
     viewerPane = (StackPane) root.lookup("#viewerPane");
@@ -71,8 +74,6 @@ final class TopControllerTest {
 
   @Test
   void categoryListIsBoundToViewModelCategories() {
-    // ListView#setItems is called with the VM-owned ObservableList in init().
-    // Identity (same instance) is what makes the binding "live".
     assertSame(viewModel.getCategories(), categoryList.getItems());
     assertEquals(
         List.of(TopCategory.FILE, TopCategory.RUNNING, TopCategory.TUTORIALS),
@@ -86,7 +87,8 @@ final class TopControllerTest {
 
     assertSame(TopCategory.FILE, categoryList.getSelectionModel().getSelectedItem());
     assertSame(TopCategory.FILE, viewModel.getSelectedCategory());
-    assertEquals(TopCategory.FILE.label(), labelTextOf(viewerPane));
+    // FILE now shows the real file browser — viewerPane has a non-label child.
+    assertFalse(viewerPane.getChildren().isEmpty(), "viewerPane should contain the file browser");
   }
 
   @Test
@@ -109,27 +111,41 @@ final class TopControllerTest {
 
   @Test
   void allCategoriesRoundTripThroughTheView(FxRobot robot) {
-    // Walk every category in both directions to catch any binding that silently breaks
-    // for a particular value.
+    // Walk every category in both directions to catch any binding that silently breaks.
     for (TopCategory c : TopCategory.values()) {
       robot.interact(() -> categoryList.getSelectionModel().select(c));
       WaitForAsyncUtils.waitForFxEvents();
       assertSame(c, viewModel.getSelectedCategory());
-      assertEquals(c.label(), labelTextOf(viewerPane));
+      assertViewerRendered(c, viewerPane);
     }
 
     for (TopCategory c : TopCategory.values()) {
       robot.interact(() -> viewModel.setSelectedCategory(c));
       WaitForAsyncUtils.waitForFxEvents();
       assertSame(c, categoryList.getSelectionModel().getSelectedItem());
-      assertEquals(c.label(), labelTextOf(viewerPane));
+      assertViewerRendered(c, viewerPane);
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /**
+   * Asserts that the viewer pane contains the correct content for {@code category}.
+   *
+   * <p>FILE renders the real file-browser sub-view (no placeholder label). RUNNING and TUTORIALS
+   * still render a placeholder {@link Label} with the category's i18n label text.
+   */
+  private static void assertViewerRendered(TopCategory category, StackPane pane) {
+    if (category == TopCategory.FILE) {
+      assertFalse(pane.getChildren().isEmpty(), "viewerPane should contain the file browser");
+    } else {
+      assertEquals(category.label(), labelTextOf(pane));
     }
   }
 
   /**
    * Reads the text of the placeholder {@link Label} the controller renders into the viewer pane.
-   * Throws an {@link AssertionError} (via {@link Objects#requireNonNull}) if no label is present —
-   * a missing label is itself a regression worth failing on.
+   * Throws {@link AssertionError} if no label is present.
    */
   private static String labelTextOf(StackPane pane) {
     Label label =

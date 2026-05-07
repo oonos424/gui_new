@@ -1,6 +1,7 @@
 package affr.app;
 
 import affr.app.top.TopController;
+import affr.data.DataStore;
 import affr.fx.viewmodel.top.TopViewModel;
 import affr.util.prefs.UserPreferences;
 import java.io.IOException;
@@ -36,6 +37,7 @@ public final class NavigationService {
   /** Loads and displays the Project Browser (first screen). */
   public void showProjectBrowser() throws IOException {
     TopViewModel viewModel = new TopViewModel();
+    DataStore dataStore = new DataStore(UserPreferences.APP_DIR);
 
     URL fxml =
         Objects.requireNonNull(
@@ -44,7 +46,7 @@ public final class NavigationService {
     FXMLLoader loader = new FXMLLoader(fxml);
     Parent root = loader.load();
     TopController controller = loader.getController();
-    controller.init(viewModel, prefs);
+    controller.init(viewModel, prefs, dataStore);
 
     Scene scene = new Scene(root, prefs.windowWidth(), prefs.windowHeight());
     stage.setTitle("AFFr");

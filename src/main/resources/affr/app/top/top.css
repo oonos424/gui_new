@@ -51,3 +51,28 @@
 .viewer-pane {
     -fx-background-color: #ffffff;
 }
+
+/* Header navigation controls (File-browser breadcrumb) */
+.header-nav-up-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #7a3040;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 3 10 3 10;
+    -fx-border-color: #d0a0a8;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+.header-nav-up-button:hover {
+    -fx-background-color: #f5c8d0;
+}
+
+.header-nav-up-button:disabled {
+    -fx-opacity: 0.35;
+}
+
+.header-nav-path {
+    -fx-text-fill: #7a3040;
+    -fx-font-size: 13px;
+}

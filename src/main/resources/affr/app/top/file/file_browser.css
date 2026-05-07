@@ -1,0 +1,59 @@
+/* ── File Browser styles ──────────────────────────────────────────────────── */
+
+/* Navigation bar */
+.nav-bar {
+    -fx-background-color: #f8f8f8;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+}
+
+.nav-up-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #555555;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 3 10 3 10;
+    -fx-border-color: #cccccc;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+.nav-up-button:hover {
+    -fx-background-color: #e6e6e6;
+}
+
+.nav-up-button:disabled {
+    -fx-opacity: 0.4;
+}
+
+.path-label {
+    -fx-text-fill: #444444;
+    -fx-font-size: 13px;
+}
+
+/* Entry list */
+.entry-list {
+    -fx-background-color: #ffffff;
+    -fx-border-width: 0;
+}
+
+.entry-list .list-cell {
+    -fx-padding: 9 14 9 14;
+    -fx-font-size: 14px;
+    -fx-background-color: transparent;
+}
+
+.entry-list .list-cell:selected {
+    -fx-background-color: #d0e8ff;
+    -fx-text-fill: #1a1a1a;
+}
+
+.entry-list .list-cell:hover:!selected {
+    -fx-background-color: #eaf4ff;
+}
+
+/* Empty-folder placeholder */
+.empty-label {
+    -fx-text-fill: #aaaaaa;
+    -fx-font-size: 14px;
+}

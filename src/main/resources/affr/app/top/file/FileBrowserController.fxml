@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.layout.StackPane?>
+
+<!--
+  Content-only layout for the File-browser view.
+  Navigation controls (Up button, breadcrumb path) live in the app header
+  and are managed by TopController.
+-->
+<StackPane
+    xmlns:fx="http://javafx.com/fxml"
+    fx:controller="affr.app.top.file.FileBrowserController"
+    stylesheets="@file_browser.css">
+
+  <ListView fx:id="itemList" styleClass="entry-list"/>
+
+  <!-- Loading spinner — centred over the list, shown only during IO -->
+  <ProgressIndicator
+      fx:id="loadingIndicator"
+      maxWidth="44.0"
+      maxHeight="44.0"
+      visible="false"/>
+
+  <!-- Shown when the directory exists but has no sub-folders or projects -->
+  <Label
+      fx:id="emptyLabel"
+      styleClass="empty-label"
+      text="No folders or projects here"
+      visible="false"/>
+
+</StackPane>

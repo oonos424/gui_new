@@ -1,15 +1,27 @@
 package affr.app.top;
 
-import affr.util.i18n.I18n;
-import affr.util.prefs.UserPreferences;
+import affr.app.top.file.FileBrowserController;
+import affr.data.DataStore;
+import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
+import affr.util.i18n.I18n;
+import affr.util.prefs.UserPreferences;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Objects;
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -20,12 +32,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * It contains no domain data and no application services — those live in (or behind) the ViewModel.
  *
  * <p>Lifecycle: FXML loading injects the widgets, then {@link #initialize()} runs (rendering rules
- * only), then the application calls {@link #init(TopViewModel, UserPreferences)} to wire bindings.
+ * only), then the application calls {@link #init(TopViewModel, UserPreferences, DataStore)} to wire
+ * bindings.
+ *
+ * <p>The header navigation area ({@code headerNav}) is shared chrome owned by this controller.
+ * It is shown and wired to the {@link FileBrowserViewModel} when the FILE category is active, and
+ * hidden for all other categories.
  */
 public final class TopController {
 
   // -------------------------------------------------------------------------
-  // FXML-injected widgets (non-null after FXMLLoader.load(); null before)
+  // FXML-injected widgets
   // -------------------------------------------------------------------------
 
   @FXML private @Nullable ListView<TopCategory> categoryList;
@@ -33,11 +50,25 @@ public final class TopController {
   @FXML private @Nullable RadioMenuItem langEnItem;
   @FXML private @Nullable RadioMenuItem langJaItem;
 
+  // Header navigation controls (FILE category breadcrumb)
+  @FXML private @Nullable HBox headerNav;
+  @FXML private @Nullable Button headerNavUpButton;
+  @FXML private @Nullable Label headerNavPathLabel;
+
   // -------------------------------------------------------------------------
-  // ViewModel reference (single non-FXML field; set by init())
+  // ViewModel + services (set by init())
   // -------------------------------------------------------------------------
 
   private @Nullable TopViewModel viewModel;
+  private @Nullable DataStore dataStore;
+
+  // -------------------------------------------------------------------------
+  // Lazily-created sub-view state (cached after first creation)
+  // -------------------------------------------------------------------------
+
+  private @Nullable Node fileBrowserNode;
+  private @Nullable FileBrowserController fileBrowserController;
+  private @Nullable FileBrowserViewModel fileBrowserViewModel;
 
   // -------------------------------------------------------------------------
   // FXML lifecycle — rendering rules only, no data
@@ -75,7 +106,7 @@ public final class TopController {
   }
 
   // -------------------------------------------------------------------------
-  // Public API — bind widgets to the supplied ViewModel
+  // Public API
   // -------------------------------------------------------------------------
 
   /**
@@ -83,9 +114,11 @@ public final class TopController {
    *
    * @param viewModel the ViewModel for this screen
    * @param prefs user preferences used to persist the selected language
+   * @param dataStore the master data store used to back the FILE-category view
    */
-  public void init(TopViewModel viewModel, UserPreferences prefs) {
+  public void init(TopViewModel viewModel, UserPreferences prefs, DataStore dataStore) {
     this.viewModel = viewModel;
+    this.dataStore = dataStore;
 
     ListView<TopCategory> list = requireCategoryList();
     list.setItems(viewModel.getCategories());
@@ -100,9 +133,7 @@ public final class TopController {
               }
             });
 
-    // ── ViewModel selection → ListView + viewer area ────────────────────
-    // The selection-model select() is idempotent, so writing the same value
-    // back from VM does not re-fire the listener above.
+    // ── ViewModel selection → ListView + viewer area ─────────────────
     viewModel
         .selectedCategoryProperty()
         .addListener(
@@ -111,11 +142,11 @@ public final class TopController {
               renderViewer(selected);
             });
 
-    // Initial sync: reflect the VM's starting state in the widgets.
+    // Initial sync
     list.getSelectionModel().select(viewModel.getSelectedCategory());
     renderViewer(viewModel.getSelectedCategory());
 
-    // ── Language menu ────────────────────────────────────────────────────
+    // ── Language menu ────────────────────────────────────────────────
     syncLanguageMenu(I18n.getLocale());
 
     requireLangEnItem()
@@ -134,7 +165,7 @@ public final class TopController {
               prefs.save();
             });
 
-    // ── Refresh widgets when locale changes ──────────────────────────────
+    // ── Refresh widgets when locale changes ──────────────────────────
     I18n.bundleProperty()
         .addListener(
             (obs, old, bundle) -> {
@@ -148,59 +179,161 @@ public final class TopController {
   // -------------------------------------------------------------------------
 
   /**
-   * Renders a placeholder for the selected category. Each branch will be replaced by a real
-   * sub-view (file browser, running calculations, tutorials) loaded from its own FXML/controller.
+   * Renders the viewer pane and updates the header navigation area for the given category.
+   *
+   * <p>FILE: shows the real file-browser node and the header nav controls (Up + breadcrumb).
+   * RUNNING / TUTORIALS: shows a placeholder label and hides the header nav.
    */
   private void renderViewer(TopCategory category) {
-    Label placeholder = new Label(I18n.get(category.messageKey()));
-    placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #888;");
-    requireViewerPane().getChildren().setAll(placeholder);
+    StackPane pane = requireViewerPane();
+    switch (category) {
+      case FILE -> {
+        requireHeaderNav().setVisible(true);
+        pane.getChildren().setAll(requireFileBrowserNode());
+      }
+      case RUNNING, TUTORIALS -> {
+        requireHeaderNav().setVisible(false);
+        Label placeholder = new Label(I18n.get(category.messageKey()));
+        placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #888;");
+        pane.getChildren().setAll(placeholder);
+      }
+    }
   }
 
-  /** Marks the radio item that matches {@code locale} as selected. */
+  /**
+   * Returns the file-browser node, creating and wiring everything on the first call.
+   *
+   * <p>On first call:
+   * <ol>
+   *   <li>Loads {@code FileBrowserController.fxml}.
+   *   <li>Creates a {@link FileBrowserViewModel} backed by the {@link DataStore}.
+   *   <li>Initialises the controller with the ViewModel.
+   *   <li>Binds the header Up button and path label to the ViewModel.
+   * </ol>
+   */
+  private Node requireFileBrowserNode() {
+    if (fileBrowserNode == null) {
+      URL fxml =
+          Objects.requireNonNull(
+              FileBrowserController.class.getResource("FileBrowserController.fxml"),
+              "FileBrowserController.fxml not found on classpath");
+      FXMLLoader loader = new FXMLLoader(fxml);
+      try {
+        Node node = loader.load();
+        FileBrowserController controller = loader.getController();
+        FileBrowserViewModel fbViewModel = new FileBrowserViewModel(requireDataStore());
+        controller.init(fbViewModel);
+
+        fileBrowserNode = node;
+        fileBrowserController = controller;
+        fileBrowserViewModel = fbViewModel;
+
+        wireHeaderNav(fbViewModel, controller);
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to load FileBrowserController.fxml", e);
+      }
+    }
+    return fileBrowserNode;
+  }
+
+  /**
+   * Binds the header navigation widgets to the {@link FileBrowserViewModel}.
+   *
+   * <ul>
+   *   <li>Path label text tracks {@code currentPathProperty()} and is formatted relative to the
+   *       workspace root.
+   *   <li>Up button calls {@link FileBrowserController#navigateUp()}.
+   *   <li>Up button is disabled when the browser is already at the workspace root.
+   * </ul>
+   */
+  private void wireHeaderNav(FileBrowserViewModel vm, FileBrowserController controller) {
+    DataStore ds = requireDataStore();
+
+    // Path label: format as "~/.affr" or "~/.affr/sub/path"
+    requireHeaderNavPathLabel()
+        .textProperty()
+        .bind(
+            Bindings.createStringBinding(
+                () -> formatBreadcrumb(vm.getCurrentPath(), ds.getRootPath()),
+                vm.currentPathProperty()));
+
+    // Up button action
+    requireHeaderNavUpButton().setOnAction(e -> controller.navigateUp());
+
+    // Up button disabled at root
+    requireHeaderNavUpButton()
+        .disableProperty()
+        .bind(
+            Bindings.createBooleanBinding(vm::isAtRoot, vm.currentPathProperty()));
+  }
+
+  /** Formats a path as {@code ~/.affr} or {@code ~/.affr/relative/sub/path}. */
+  private static String formatBreadcrumb(Path current, Path root) {
+    if (current.equals(root)) {
+      return "~/.affr";
+    }
+    return "~/.affr/" + root.relativize(current);
+  }
+
   private void syncLanguageMenu(Locale locale) {
     boolean isJa = Locale.JAPANESE.getLanguage().equals(locale.getLanguage());
     requireLangJaItem().setSelected(isJa);
     requireLangEnItem().setSelected(!isJa);
   }
 
+  // ── Null-guard helpers ────────────────────────────────────────────────────
+
   private ListView<TopCategory> requireCategoryList() {
     ListView<TopCategory> list = categoryList;
-    if (list == null) {
-      throw new IllegalStateException("categoryList not injected by FXMLLoader");
-    }
+    if (list == null) throw new IllegalStateException("categoryList not injected");
     return list;
   }
 
   private StackPane requireViewerPane() {
     StackPane pane = viewerPane;
-    if (pane == null) {
-      throw new IllegalStateException("viewerPane not injected by FXMLLoader");
-    }
+    if (pane == null) throw new IllegalStateException("viewerPane not injected");
     return pane;
+  }
+
+  private HBox requireHeaderNav() {
+    HBox nav = headerNav;
+    if (nav == null) throw new IllegalStateException("headerNav not injected");
+    return nav;
+  }
+
+  private Button requireHeaderNavUpButton() {
+    Button btn = headerNavUpButton;
+    if (btn == null) throw new IllegalStateException("headerNavUpButton not injected");
+    return btn;
+  }
+
+  private Label requireHeaderNavPathLabel() {
+    Label lbl = headerNavPathLabel;
+    if (lbl == null) throw new IllegalStateException("headerNavPathLabel not injected");
+    return lbl;
   }
 
   private RadioMenuItem requireLangEnItem() {
     RadioMenuItem item = langEnItem;
-    if (item == null) {
-      throw new IllegalStateException("langEnItem not injected by FXMLLoader");
-    }
+    if (item == null) throw new IllegalStateException("langEnItem not injected");
     return item;
   }
 
   private RadioMenuItem requireLangJaItem() {
     RadioMenuItem item = langJaItem;
-    if (item == null) {
-      throw new IllegalStateException("langJaItem not injected by FXMLLoader");
-    }
+    if (item == null) throw new IllegalStateException("langJaItem not injected");
     return item;
   }
 
   private TopViewModel requireViewModel() {
     TopViewModel vm = viewModel;
-    if (vm == null) {
-      throw new IllegalStateException("init() has not been called");
-    }
+    if (vm == null) throw new IllegalStateException("init() has not been called");
     return vm;
+  }
+
+  private DataStore requireDataStore() {
+    DataStore ds = dataStore;
+    if (ds == null) throw new IllegalStateException("init() has not been called");
+    return ds;
   }
 }
