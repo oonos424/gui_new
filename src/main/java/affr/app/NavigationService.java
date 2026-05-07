@@ -1,6 +1,7 @@
 package affr.app;
 
 import affr.app.top.TopController;
+import affr.util.prefs.UserPreferences;
 import affr.fx.viewmodel.top.TopViewModel;
 import java.io.IOException;
 import java.net.URL;
@@ -25,10 +26,12 @@ public final class NavigationService {
 
   private final Stage stage;
   private final AppConfig config;
+  private final UserPreferences prefs;
 
-  public NavigationService(Stage stage, AppConfig config) {
+  public NavigationService(Stage stage, AppConfig config, UserPreferences prefs) {
     this.stage = stage;
     this.config = config;
+    this.prefs = prefs;
   }
 
   /** Loads and displays the Project Browser (first screen). */
@@ -42,7 +45,7 @@ public final class NavigationService {
     FXMLLoader loader = new FXMLLoader(fxml);
     Parent root = loader.load();
     TopController controller = loader.getController();
-    controller.init(viewModel);
+    controller.init(viewModel, prefs);
 
     Scene scene = new Scene(root, INITIAL_WIDTH, INITIAL_HEIGHT);
     stage.setTitle("AFFr");

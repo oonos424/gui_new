@@ -1,5 +1,7 @@
 package affr.app;
 
+import affr.util.i18n.I18n;
+import affr.util.prefs.UserPreferences;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
@@ -15,7 +17,9 @@ public final class AFFrMain extends Application {
   @Override
   public void start(Stage stage) throws Exception {
     AppConfig config = AppConfig.parse(getParameters().getRaw());
-    NavigationService nav = new NavigationService(stage, config);
+    UserPreferences prefs = UserPreferences.load();
+    I18n.setLocale(prefs.locale());
+    NavigationService nav = new NavigationService(stage, config, prefs);
     nav.showProjectBrowser();
   }
 }

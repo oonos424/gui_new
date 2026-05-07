@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import affr.util.prefs.UserPreferences;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
 import java.net.URL;
@@ -53,7 +54,7 @@ final class TopControllerTest {
 
     controller = loader.getController();
     viewModel = new TopViewModel();
-    controller.init(viewModel);
+    controller.init(viewModel, UserPreferences.load());
 
     categoryList = (ListView<TopCategory>) root.lookup("#categoryList");
     viewerPane = (StackPane) root.lookup("#viewerPane");

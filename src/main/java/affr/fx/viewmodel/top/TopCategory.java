@@ -1,24 +1,32 @@
 package affr.fx.viewmodel.top;
 
+import affr.util.i18n.I18n;
+
 /**
  * The three top-level navigation modes available in the Project Browser.
  *
- * <p>Owned by the ViewModel layer: the View consumes the {@link #label()} only for cell rendering.
- * The label string here is a temporary stand-in; presentation strings will move to a resource
- * bundle in a later iteration.
+ * <p>Each constant stores a resource-bundle key; the display label is resolved at call time via
+ * {@link #label()}, which delegates to {@link I18n}. This means labels automatically reflect the
+ * currently active locale without any additional wiring in the ViewModel.
  */
 public enum TopCategory {
-  FILE("ファイル"),
-  RUNNING("実行中の計算"),
-  TUTORIALS("チュートリアル");
+  FILE("category.file"),
+  RUNNING("category.running"),
+  TUTORIALS("category.tutorials");
 
-  private final String label;
+  private final String messageKey;
 
-  TopCategory(String label) {
-    this.label = label;
+  TopCategory(String messageKey) {
+    this.messageKey = messageKey;
   }
 
+  /** Returns the resource-bundle key for this category (e.g. {@code "category.file"}). */
+  public String messageKey() {
+    return messageKey;
+  }
+
+  /** Returns the localised display label for the currently active locale. */
   public String label() {
-    return label;
+    return I18n.get(messageKey);
   }
 }
