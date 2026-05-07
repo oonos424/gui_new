@@ -5,11 +5,11 @@ import org.apache.tools.ant.taskdefs.condition.Os
 plugins {
   application
   id("com.diffplug.spotless") version "7.2.1"
-  id("com.github.johnrengelman.shadow") version "8.1.1"
+  // Shadow (fat-JAR packaging) is deferred — will be added when packaging is needed
   id("org.checkerframework") version "0.6.59"
   id("org.openjfx.javafxplugin") version "0.1.0"
   jacoco
-  kotlin("jvm") version "1.9.25"
+  kotlin("jvm") version "2.2.0"
 }
 
 // # Custom tasks
@@ -95,6 +95,8 @@ tasks.processResources {
 
 // NOTE: Update jvmTarget when upgrading the Java toolchain
 val jvmTarget = "25"
+// NOTE: Update when Kotlin adds JVM 25 target support; JVM 24 bytecode runs on JVM 25 without issue
+val kotlinJvmTarget = "24"
 
 java {
   sourceCompatibility = JavaVersion.toVersion(jvmTarget)
@@ -102,7 +104,9 @@ java {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-  kotlinOptions.jvmTarget = jvmTarget
+  compilerOptions.jvmTarget.set(
+      org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget(kotlinJvmTarget)
+  )
 }
 
 javafx {
@@ -127,7 +131,7 @@ dependencies {
   implementation("org.checkerframework:checker-qual:3.51.0")
 
   testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-  testImplementation("org.jetbrains.kotlin:kotlin-test")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:2.2.0")
   testImplementation("org.testfx:testfx-junit5:4.0.16-alpha")
   // TODO: check for an openjfx-monocle release aligned with JavaFX 25
   testImplementation("org.testfx:openjfx-monocle:21.0.2")
@@ -161,24 +165,18 @@ val copyMonacoIntoResources by
     }
 
 // # Run configuration — inject default CLI args for development runs
+//
+// Defaults are set at configuration time (config-cache compatible).
+// Override with: ./gradlew run --args="--profile=production --tutorial-dir /other/path"
 
-tasks.withType<JavaExec> {
+tasks.withType<JavaExec>().configureEach {
   standardOutput = System.out
   errorOutput = System.out
-  doFirst {
-    val originalArgs = args.orEmpty()
+}
 
-    val argsToPrepend = buildList {
-      if (originalArgs.none { it.startsWith("--profile") }) {
-        add("--profile=debug")
-        println("[$name] Added '--profile=debug' to arguments.")
-      }
-      add("--tutorial-dir")
-      add(layout.projectDirectory.dir("submodule/case/gui/tutorials/").asFile.absolutePath)
-    }
-
-    setArgs(argsToPrepend + originalArgs)
-  }
+tasks.named<JavaExec>("run").configure {
+  val tutorialDir = layout.projectDirectory.dir("submodule/case/gui/tutorials/").asFile.absolutePath
+  args("--profile=debug", "--tutorial-dir", tutorialDir)
 }
 
 // # Code formatting — enforced by Spotless at build time

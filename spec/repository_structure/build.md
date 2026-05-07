@@ -13,9 +13,10 @@ configuration.
 | Concern | Value |
 |---|---|
 | JVM language | Java 25 |
-| JVM target | 25 |
+| JVM target | 25 (Kotlin targets 24; JVM 25 runs JVM 24 bytecode without issue) |
 | JavaFX | 25 |
-| Build tool | Gradle 8.14.2 (Kotlin DSL) |
+| Build tool | Gradle 9.0 (Kotlin DSL) |
+| Kotlin | 2.2.0 |
 | Python (Trame backend) | 3.12+ |
 
 ---
@@ -74,6 +75,30 @@ Formatting is also enforced at build time by **Spotless**:
 
 Run `./gradlew spotlessApply` to auto-format.
 Run `./gradlew quickCheck` for fast static checks (formatting only, no tests).
+
+---
+
+## Build Tool Notes
+
+### Gradle 9.0
+
+Gradle 9.0 is required because:
+
+- Gradle 8.14.x bundles Kotlin 2.0.21 (released before Java 25), whose embedded IntelliJ
+  `JavaVersion.parse()` cannot handle the `25.0.3` version string.
+- Gradle 9.0 bundles Kotlin 2.2 which handles Java 25 version strings correctly.
+
+### Shadow plugin
+
+`com.github.johnrengelman.shadow` is intentionally **absent** from the plugins block. It is
+not Gradle 9.0-compatible at version 8.1.1, and packaging is deferred per the project plan.
+Add it back (with a Gradle-9-compatible version) when fat-JAR packaging is needed.
+
+### Configuration cache
+
+`org.gradle.configuration-cache=false` in `gradle.properties` until the Checker Framework
+Gradle plugin and any other plugins are verified compatible with Gradle 9.0's configuration
+cache requirements.
 
 ---
 
