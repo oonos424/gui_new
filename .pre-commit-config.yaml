@@ -57,3 +57,9 @@ repos:
             - --jfx-version=25.0
             - --
         files: \.fxml$
+    -   id: spotless-check
+        name: Run spotlessCheck
+        language: system
+        entry: ./gradlew --no-daemon spotlessCheck
+        pass_filenames: false
+        files: \.(java|kt|kts)$
