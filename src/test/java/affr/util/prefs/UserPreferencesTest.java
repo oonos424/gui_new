@@ -2,9 +2,11 @@ package affr.util.prefs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,6 +32,8 @@ final class UserPreferencesTest {
     assertEquals(UserPreferences.DEFAULT_WINDOW_HEIGHT, prefs.windowHeight());
     assertFalse(Double.isFinite(prefs.windowX()), "windowX should be NaN when not saved");
     assertFalse(Double.isFinite(prefs.windowY()), "windowY should be NaN when not saved");
+    assertNull(prefs.browserViewMode(), "browserViewMode should be null when not saved");
+    assertNull(prefs.browserPath(), "browserPath should be null when not saved");
   }
 
   // -------------------------------------------------------------------------
@@ -131,17 +135,85 @@ final class UserPreferencesTest {
   }
 
   // -------------------------------------------------------------------------
+  // Browser view mode round-trip
+  // -------------------------------------------------------------------------
+
+  @Test
+  void browserViewModeRoundTrip(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setBrowserViewMode("TREE");
+    prefs.save();
+
+    assertEquals("TREE", UserPreferences.loadFrom(file).browserViewMode());
+  }
+
+  @Test
+  void allViewModeNamesRoundTrip(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+
+    for (String mode : List.of("LIST", "ICON", "TREE")) {
+      UserPreferences prefs = UserPreferences.loadFrom(file);
+      prefs.setBrowserViewMode(mode);
+      prefs.save();
+      assertEquals(mode, UserPreferences.loadFrom(file).browserViewMode(), "failed for: " + mode);
+    }
+  }
+
+  @Test
+  void unsavedBrowserViewModeIsNull(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setWindowSize(800, 600); // save something else but not the view mode
+    prefs.save();
+
+    assertNull(UserPreferences.loadFrom(file).browserViewMode());
+  }
+
+  // -------------------------------------------------------------------------
+  // Browser path round-trip
+  // -------------------------------------------------------------------------
+
+  @Test
+  void browserPathRoundTrip(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+    String savedPath = dir.resolve("workspace/subdir").toString();
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setBrowserPath(savedPath);
+    prefs.save();
+
+    assertEquals(savedPath, UserPreferences.loadFrom(file).browserPath());
+  }
+
+  @Test
+  void unsavedBrowserPathIsNull(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setWindowSize(800, 600); // save something else but not the path
+    prefs.save();
+
+    assertNull(UserPreferences.loadFrom(file).browserPath());
+  }
+
+  // -------------------------------------------------------------------------
   // Full round-trip
   // -------------------------------------------------------------------------
 
   @Test
   void allFieldsRoundTrip(@TempDir Path dir) {
     Path file = dir.resolve("prefs.properties");
+    String savedPath = dir.resolve("workspace").toString();
 
     UserPreferences prefs = UserPreferences.loadFrom(file);
     prefs.setLocale(Locale.JAPANESE);
     prefs.setWindowSize(1920, 1080);
     prefs.setWindowPosition(100, 50);
+    prefs.setBrowserViewMode("ICON");
+    prefs.setBrowserPath(savedPath);
     prefs.save();
 
     UserPreferences loaded = UserPreferences.loadFrom(file);
@@ -150,6 +222,8 @@ final class UserPreferencesTest {
     assertEquals(1080.0, loaded.windowHeight());
     assertEquals(100.0, loaded.windowX());
     assertEquals(50.0, loaded.windowY());
+    assertEquals("ICON", loaded.browserViewMode());
+    assertEquals(savedPath, loaded.browserPath());
   }
 
   @Test
@@ -186,6 +260,8 @@ final class UserPreferencesTest {
     assertEquals(UserPreferences.DEFAULT_WINDOW_HEIGHT, prefs.windowHeight());
     assertFalse(Double.isFinite(prefs.windowX()));
     assertFalse(Double.isFinite(prefs.windowY()));
+    assertNull(prefs.browserViewMode());
+    assertNull(prefs.browserPath());
   }
 
   @Test

@@ -5,6 +5,7 @@ import affr.app.top.file.ProjectController;
 import affr.data.DataStore;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
+import affr.fx.viewmodel.top.file.FileBrowserViewMode;
 import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.fx.viewmodel.top.file.ProjectViewModel;
 import affr.project.AFFrProject;
@@ -13,6 +14,7 @@ import affr.util.i18n.I18n;
 import affr.util.prefs.UserPreferences;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import javafx.beans.binding.Bindings;
@@ -73,6 +75,7 @@ public final class TopController {
 
   private @Nullable TopViewModel viewModel;
   private @Nullable DataStore dataStore;
+  private @Nullable UserPreferences prefs;
 
   // -------------------------------------------------------------------------
   // Lazily-created sub-view state (cached after first creation)
@@ -131,6 +134,7 @@ public final class TopController {
   public void init(TopViewModel viewModel, UserPreferences prefs, DataStore dataStore) {
     this.viewModel = viewModel;
     this.dataStore = dataStore;
+    this.prefs = prefs;
 
     ListView<TopCategory> list = requireCategoryList();
     list.setItems(viewModel.getCategories());
@@ -239,6 +243,9 @@ public final class TopController {
           throw new IllegalStateException("FileBrowserController was not set by FXMLLoader");
         }
         FileBrowserViewModel fbViewModel = new FileBrowserViewModel(requireDataStore());
+
+        restoreBrowserState(fbViewModel);
+
         controller.init(fbViewModel);
 
         fileBrowserNode = node;
@@ -246,6 +253,8 @@ public final class TopController {
         fileBrowserViewModel = fbViewModel;
 
         wireHeaderNav(fbViewModel, controller);
+
+        persistBrowserStateOn(fbViewModel);
 
         // Wire project-open event: double-clicking a ProjectEntry triggers loading.
         fbViewModel
@@ -265,6 +274,67 @@ public final class TopController {
       throw new IllegalStateException("fileBrowserNode was not initialized");
     }
     return node;
+  }
+
+  /**
+   * Applies the saved browser view mode and directory path from {@link UserPreferences} to {@code
+   * vm} before the controller is initialised. Falls back silently to defaults if the saved values
+   * are absent, invalid, or point to a directory that no longer exists inside the workspace.
+   */
+  private void restoreBrowserState(FileBrowserViewModel vm) {
+    UserPreferences savedPrefs = prefs;
+    if (savedPrefs == null) {
+      return;
+    }
+
+    String savedMode = savedPrefs.browserViewMode();
+    if (savedMode != null) {
+      try {
+        vm.setViewMode(FileBrowserViewMode.valueOf(savedMode));
+      } catch (IllegalArgumentException ignored) {
+        // Unrecognised name — keep the default LIST mode.
+      }
+    }
+
+    String savedPathStr = savedPrefs.browserPath();
+    if (savedPathStr != null) {
+      try {
+        Path savedPath = Path.of(savedPathStr);
+        Path rootPath = requireDataStore().getRootPath();
+        if (savedPath.startsWith(rootPath) && Files.isDirectory(savedPath)) {
+          vm.setCurrentPath(savedPath);
+        }
+      } catch (Exception ignored) {
+        // Malformed path or IO error — keep the default root path.
+      }
+    }
+  }
+
+  /**
+   * Adds listeners on {@code vm} that persist the browser view mode and current directory path to
+   * {@link UserPreferences} whenever they change. Called once after the controller is wired so the
+   * initial-restore writes do not trigger unnecessary saves.
+   */
+  private void persistBrowserStateOn(FileBrowserViewModel vm) {
+    vm.viewModeProperty()
+        .addListener(
+            (obs, old, mode) -> {
+              UserPreferences p = prefs;
+              if (p != null) {
+                p.setBrowserViewMode(mode.name());
+                p.save();
+              }
+            });
+
+    vm.currentPathProperty()
+        .addListener(
+            (obs, old, path) -> {
+              UserPreferences p = prefs;
+              if (p != null) {
+                p.setBrowserPath(path.toString());
+                p.save();
+              }
+            });
   }
 
   /**
