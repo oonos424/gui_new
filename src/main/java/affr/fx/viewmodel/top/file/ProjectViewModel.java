@@ -2,8 +2,10 @@ package affr.fx.viewmodel.top.file;
 
 import affr.project.AFFrProject;
 import affr.project.ProjectItem;
+import java.nio.file.Path;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -60,14 +62,37 @@ public final class ProjectViewModel {
 
   // ── Project access ────────────────────────────────────────────────────────
 
+  /** The underlying domain project. Exposed for use by the app layer (e.g. creating items). */
+  public AFFrProject getProject() {
+    return project;
+  }
+
   /** The project's display name (directory name). */
   public String getProjectName() {
     return project.getName();
   }
 
+  /** Absolute path to the project directory on disk. */
+  public Path getProjectPath() {
+    return project.getPath();
+  }
+
   /** Free-text memo from {@code .affr_project}; empty string if not set. */
   public String getProjectMemo() {
     return project.getMemo();
+  }
+
+  /** The live observable list of project items (unsorted). Used for mutations such as add. */
+  public ObservableList<ProjectItem> getProjectItems() {
+    return project.getItems();
+  }
+
+  /**
+   * Adds {@code item} to the project's item list on the JavaFX Application Thread. Must be called
+   * on the JavaFX Application Thread.
+   */
+  public void addItem(ProjectItem item) {
+    project.getItems().add(item);
   }
 
   // ── Focused item (forwarded from AFFrProject) ─────────────────────────────

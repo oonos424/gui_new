@@ -2,12 +2,18 @@ package affr.app.top.file;
 
 import affr.fx.viewmodel.top.file.ProjectSortOrder;
 import affr.fx.viewmodel.top.file.ProjectViewModel;
-import affr.project.CalculationItem;
+import affr.project.AFFrCalculation;
+import affr.project.AFFrProject;
 import affr.project.CalculationStatus;
 import affr.project.ProjectItem;
+import affr.project.ProjectWriter;
 import affr.util.i18n.I18n;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
@@ -59,6 +65,8 @@ public final class ProjectController {
     requireProjectNameLabel().setText(viewModel.getProjectName());
     requireItemList().setItems(viewModel.getSortedItems());
 
+    requireAddItemButton().setText(I18n.get("project.addCalButton"));
+
     // ListView → ViewModel: user clicks an item
     requireItemList()
         .getSelectionModel()
@@ -92,7 +100,49 @@ public final class ProjectController {
             (obs, old, bundle) -> {
               requireItemList().refresh();
               refreshSortChoiceBoxLabels();
+              requireAddItemButton().setText(I18n.get("project.addCalButton"));
             });
+  }
+
+  // ── Add calculation ────────────────────────────────────────────────────────
+
+  @FXML
+  private void onAddCalculation() {
+    ProjectViewModel vm = requireViewModel();
+    AFFrProject project = vm.getProject();
+    Path projectPath = vm.getProjectPath();
+    List<ProjectItem> snapshot = List.copyOf(vm.getProjectItems());
+
+    Task<AFFrCalculation> task =
+        new Task<>() {
+          @Override
+          protected AFFrCalculation call() throws Exception {
+            return ProjectWriter.createCalculation(projectPath, snapshot, project);
+          }
+        };
+
+    task.setOnSucceeded(
+        e -> {
+          @Nullable AFFrCalculation cal = task.getValue();
+          if (cal != null) {
+            vm.addItem(cal);
+            requireItemList().getSelectionModel().select(cal);
+          }
+        });
+
+    task.setOnFailed(
+        e -> {
+          @Nullable Throwable ex = task.getException();
+          String message = ex != null ? ex.getMessage() : I18n.get("dialog.error.title");
+          Alert alert = new Alert(Alert.AlertType.ERROR);
+          alert.setTitle(I18n.get("dialog.error.title"));
+          alert.setContentText(message != null ? message : "");
+          alert.showAndWait();
+        });
+
+    Thread thread = new Thread(task, "affr-cal-creator");
+    thread.setDaemon(true);
+    thread.start();
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -168,6 +218,12 @@ public final class ProjectController {
     return list;
   }
 
+  private Button requireAddItemButton() {
+    Button btn = addItemButton;
+    if (btn == null) throw new IllegalStateException("addItemButton not injected");
+    return btn;
+  }
+
   private ProjectViewModel requireViewModel() {
     ProjectViewModel vm = viewModel;
     if (vm == null) throw new IllegalStateException("init() has not been called");
@@ -194,15 +250,15 @@ public final class ProjectController {
         return;
       }
       switch (item) {
-        case CalculationItem c -> renderCalculation(c);
+        case AFFrCalculation c -> renderCalculation(c);
       }
     }
 
-    private void renderCalculation(CalculationItem c) {
-      String statusLabel = I18n.get(c.status().messageKey());
+    private void renderCalculation(AFFrCalculation c) {
+      String statusLabel = I18n.get(c.getStatus().messageKey());
       String datePart = c.date().isEmpty() ? "" : "  ·  " + c.date();
       setText(c.name() + "\n" + statusLabel + datePart);
-      setStyle(statusColorStyle(c.status()));
+      setStyle(statusColorStyle(c.getStatus()));
     }
 
     private static String statusColorStyle(CalculationStatus status) {

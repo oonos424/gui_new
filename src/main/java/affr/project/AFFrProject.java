@@ -38,7 +38,8 @@ public final class AFFrProject {
    * @param memo free-text memo read from {@code .affr_project}; empty if not set
    * @param initialItems the items to populate the list with (copied into an observable list)
    */
-  public AFFrProject(String name, Path path, String memo, List<ProjectItem> initialItems) {
+  public AFFrProject(
+      String name, Path path, String memo, List<? extends ProjectItem> initialItems) {
     this.name = name;
     this.path = path;
     this.memo = memo;

@@ -23,15 +23,16 @@ final class AFFrProjectTest {
   private static final Path PROJ_PATH = Path.of("/tmp/test_project");
   private static final Path CAL_PATH = PROJ_PATH.resolve("cal_01");
 
-  private static CalculationItem makeCalItem() {
-    return new CalculationItem("cal_01", CAL_PATH, CalculationStatus.SETTING, "2026-05-01");
+  private static AFFrCalculation makeCalc() {
+    return new AFFrCalculation(
+        "cal_01", CAL_PATH, null, AFFrCalProperty.DEFAULT, AFFrCalculationModel.DEFAULT);
   }
 
   // ── Construction ──────────────────────────────────────────────────────────
 
   @Test
   void constructorPreservesAllFields() {
-    List<ProjectItem> items = List.of(makeCalItem());
+    List<AFFrCalculation> items = List.of(makeCalc());
     AFFrProject p = new AFFrProject("my_project", PROJ_PATH, "memo text", items);
 
     assertEquals("my_project", p.getName());
@@ -48,7 +49,7 @@ final class AFFrProjectTest {
 
   @Test
   void itemsArePopulatedFromInitialList() {
-    CalculationItem item = makeCalItem();
+    AFFrCalculation item = makeCalc();
     AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of(item));
 
     assertEquals(1, p.getItems().size());
@@ -66,7 +67,7 @@ final class AFFrProjectTest {
 
   @Test
   void setFocusedItemUpdatesProperty() {
-    CalculationItem item = makeCalItem();
+    AFFrCalculation item = makeCalc();
     AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of(item));
 
     p.setFocusedItem(item);
@@ -77,7 +78,7 @@ final class AFFrProjectTest {
 
   @Test
   void focusedItemCanBeResetToNull() {
-    CalculationItem item = makeCalItem();
+    AFFrCalculation item = makeCalc();
     AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of(item));
     p.setFocusedItem(item);
 
@@ -92,7 +93,7 @@ final class AFFrProjectTest {
     AtomicInteger calls = new AtomicInteger();
     p.focusedItemProperty().addListener((obs, o, n) -> calls.incrementAndGet());
 
-    p.setFocusedItem(makeCalItem());
+    p.setFocusedItem(makeCalc());
     p.setFocusedItem(null);
 
     assertEquals(2, calls.get());
@@ -119,7 +120,7 @@ final class AFFrProjectTest {
                   }
                 });
 
-    p.getItems().add(makeCalItem());
+    p.getItems().add(makeCalc());
 
     assertEquals(1, added.size());
     assertSame(p.getItems().get(0), added.get(0));
