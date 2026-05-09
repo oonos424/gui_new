@@ -57,3 +57,78 @@
     -fx-text-fill: #aaaaaa;
     -fx-font-size: 14px;
 }
+
+/* ── Browser toolbar (top) ────────────────────────────────────────────────── */
+
+.browser-toolbar {
+    -fx-background-color: #f8f8f8;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+    -fx-spacing: 6;
+}
+
+.new-project-button {
+    -fx-background-color: #7a3040;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 5 14 5 14;
+    -fx-background-radius: 3;
+}
+
+.new-project-button:hover {
+    -fx-background-color: #5a2030;
+}
+
+/* View-mode toggle buttons (☰ list / ⊞ icon) */
+.view-mode-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #555555;
+    -fx-font-size: 15px;
+    -fx-cursor: hand;
+    -fx-padding: 3 8 3 8;
+    -fx-border-color: #cccccc;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-min-width: 32;
+}
+
+.view-mode-button:hover {
+    -fx-background-color: #e6e6e6;
+}
+
+.view-mode-button:selected {
+    -fx-background-color: #d0e8ff;
+    -fx-text-fill: #1a1a1a;
+    -fx-border-color: #90c8f0;
+}
+
+/* ── Icon view ────────────────────────────────────────────────────────────── */
+
+.icon-scroll-pane {
+    -fx-background-color: white;
+}
+
+.icon-scroll-pane > .viewport {
+    -fx-background-color: white;
+}
+
+.icon-pane {
+    -fx-background-color: white;
+}
+
+.icon-tile {
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-alignment: center;
+}
+
+.icon-tile:hover {
+    -fx-background-color: #eaf4ff;
+    -fx-background-radius: 5;
+}
+
+.icon-tile-selected {
+    -fx-background-color: #d0e8ff;
+    -fx-background-radius: 5;
+}

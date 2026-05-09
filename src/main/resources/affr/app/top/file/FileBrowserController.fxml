@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 
 <!--
@@ -10,25 +18,64 @@
   Navigation controls (Up button, breadcrumb path) live in the app header
   and are managed by TopController.
 -->
-<StackPane
+<BorderPane
     xmlns:fx="http://javafx.com/fxml"
     fx:controller="affr.app.top.file.FileBrowserController"
     stylesheets="@file_browser.css">
 
-  <ListView fx:id="itemList" styleClass="entry-list"/>
+  <!-- Toolbar: New Project button (left), view-mode toggles (right) -->
+  <top>
+    <HBox styleClass="browser-toolbar" alignment="CENTER_LEFT">
+      <padding>
+        <Insets top="6.0" right="8.0" bottom="6.0" left="10.0"/>
+      </padding>
+      <Button
+          fx:id="newProjectButton"
+          styleClass="new-project-button"
+          onAction="#onNewProject"/>
+      <!-- Spacer -->
+      <Region HBox.hgrow="ALWAYS"/>
+      <!-- View-mode toggle buttons (wired to a ToggleGroup in initialize()) -->
+      <ToggleButton fx:id="listModeButton" text="☰" styleClass="view-mode-button" selected="true"/>
+      <ToggleButton fx:id="iconModeButton" text="⊞" styleClass="view-mode-button"/>
+    </HBox>
+  </top>
 
-  <!-- Loading spinner — centred over the list, shown only during IO -->
-  <ProgressIndicator
-      fx:id="loadingIndicator"
-      maxWidth="44.0"
-      maxHeight="44.0"
-      visible="false"/>
+  <!-- Content area: list view and icon view stacked; overlays on top -->
+  <center>
+    <StackPane>
 
-  <!-- Shown when the directory exists but has no sub-folders or projects -->
-  <Label
-      fx:id="emptyLabel"
-      styleClass="empty-label"
-      text="No folders or projects here"
-      visible="false"/>
+      <!-- List view (visible by default) -->
+      <StackPane fx:id="listViewContainer">
+        <ListView fx:id="itemList" styleClass="entry-list"/>
+      </StackPane>
 
-</StackPane>
+      <!-- Icon view (hidden by default; managed by controller) -->
+      <ScrollPane
+          fx:id="iconScrollPane"
+          styleClass="icon-scroll-pane"
+          fitToWidth="true"
+          visible="false">
+        <FlowPane fx:id="iconPane" styleClass="icon-pane" hgap="12.0" vgap="12.0">
+          <padding>
+            <Insets top="14.0" right="14.0" bottom="14.0" left="14.0"/>
+          </padding>
+        </FlowPane>
+      </ScrollPane>
+
+      <!-- Shared overlays — shown over both views during loading or when empty -->
+      <ProgressIndicator
+          fx:id="loadingIndicator"
+          maxWidth="44.0"
+          maxHeight="44.0"
+          visible="false"/>
+      <Label
+          fx:id="emptyLabel"
+          styleClass="empty-label"
+          text="No folders or projects here"
+          visible="false"/>
+
+    </StackPane>
+  </center>
+
+</BorderPane>

@@ -40,6 +40,10 @@ public final class FileBrowserViewModel {
   private final ObjectProperty<@Nullable ProjectEntry> openingProject =
       new SimpleObjectProperty<>(null);
 
+  // Presentation-only: which layout mode is active (LIST, ICON, …)
+  private final ObjectProperty<FileBrowserViewMode> viewMode =
+      new SimpleObjectProperty<>(FileBrowserViewMode.LIST);
+
   /**
    * Creates a ViewModel backed by {@code dataStore}. The browser starts positioned at the workspace
    * root; the initial load is triggered by the controller calling {@code
@@ -129,6 +133,24 @@ public final class FileBrowserViewModel {
 
   public void setOpeningProject(@Nullable ProjectEntry entry) {
     openingProject.set(entry);
+  }
+
+  // ── View mode ─────────────────────────────────────────────────────────────
+
+  /**
+   * Observable display mode (LIST, ICON, …). The controller observes this property and swaps the
+   * visible content node accordingly.
+   */
+  public ObjectProperty<FileBrowserViewMode> viewModeProperty() {
+    return viewMode;
+  }
+
+  public FileBrowserViewMode getViewMode() {
+    return viewMode.get();
+  }
+
+  public void setViewMode(FileBrowserViewMode mode) {
+    viewMode.set(mode);
   }
 
   // ── Navigation helpers ────────────────────────────────────────────────────

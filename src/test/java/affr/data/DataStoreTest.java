@@ -2,6 +2,7 @@ package affr.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -196,5 +197,82 @@ final class DataStoreTest {
     DataStore store = new DataStore(root);
 
     assertEquals(root, store.getRootPath());
+  }
+
+  // -------------------------------------------------------------------------
+  // createProject
+  // -------------------------------------------------------------------------
+
+  @Test
+  void createProjectCreatesDirectoryAndMarker(@TempDir Path root) throws IOException {
+    DataStore store = new DataStore(root);
+
+    store.createProject(root, "my_project", "memo text");
+
+    assertTrue(Files.isDirectory(root.resolve("my_project")));
+    assertTrue(Files.exists(root.resolve("my_project").resolve(".affr_project")));
+  }
+
+  @Test
+  void createProjectWritesMemoVerbatimToMarker(@TempDir Path root) throws IOException {
+    DataStore store = new DataStore(root);
+
+    store.createProject(root, "proj", "hello memo");
+
+    assertEquals("hello memo", Files.readString(root.resolve("proj").resolve(".affr_project")));
+  }
+
+  @Test
+  void createProjectReturnsProjectEntry(@TempDir Path root) throws IOException {
+    DataStore store = new DataStore(root);
+
+    ProjectEntry entry = store.createProject(root, "proj", "memo");
+
+    assertEquals("proj", entry.name());
+    assertEquals(root.resolve("proj"), entry.path());
+    assertEquals("memo", entry.memo());
+  }
+
+  @Test
+  void createProjectMemoIsStrippedInReturnedEntry(@TempDir Path root) throws IOException {
+    DataStore store = new DataStore(root);
+
+    ProjectEntry entry = store.createProject(root, "proj", "  padded  ");
+
+    assertEquals("padded", entry.memo());
+  }
+
+  @Test
+  void createProjectThrowsIfDirectoryAlreadyExists(@TempDir Path root) throws IOException {
+    Files.createDirectory(root.resolve("existing"));
+    DataStore store = new DataStore(root);
+
+    assertThrows(IOException.class, () -> store.createProject(root, "existing", ""));
+  }
+
+  @Test
+  void createProjectThrowsOnBlankName(@TempDir Path root) {
+    DataStore store = new DataStore(root);
+
+    assertThrows(IllegalArgumentException.class, () -> store.createProject(root, "   ", ""));
+  }
+
+  @Test
+  void createProjectThrowsOnNameWithSlash(@TempDir Path root) {
+    DataStore store = new DataStore(root);
+
+    assertThrows(IllegalArgumentException.class, () -> store.createProject(root, "a/b", ""));
+  }
+
+  @Test
+  void createdProjectAppearsInLoadChildren(@TempDir Path root) throws IOException {
+    DataStore store = new DataStore(root);
+
+    store.createProject(root, "new_proj", "");
+    List<BrowserEntry> entries = store.loadChildren(root);
+
+    assertEquals(1, entries.size());
+    assertInstanceOf(ProjectEntry.class, entries.get(0));
+    assertEquals("new_proj", entries.get(0).name());
   }
 }

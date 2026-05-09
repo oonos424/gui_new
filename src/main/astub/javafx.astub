@@ -43,14 +43,21 @@ class Dialog<R> {
     final DialogPane getDialogPane(@UnknownInitialization Dialog<R> this);
     // 573
     final void setDialogPane(@UnknownInitialization Dialog<R> this, DialogPane value);
-    // 721
-    final void setResultConverter(@UnknownInitialization Dialog<R> this, Callback<ButtonType, R> value);
+    // 721 — resultConverter receives null when the dialog is closed via the X button
+    final void setResultConverter(@UnknownInitialization Dialog<R> this, Callback<@Nullable ButtonType, @Nullable R> value);
     // 731
     final ReadOnlyBooleanProperty showingProperty(@UnknownInitialization Dialog<R> this);
     // 770
     final void setResizable(@UnknownInitialization Dialog<R> this, boolean resizable);
     // 907
     final void setOnShowing(@UnknownInitialization Dialog<R> this, EventHandler<DialogEvent> value);
+    // showAndWait may return empty Optional (X-close) or a nullable result
+    java.util.Optional<@Nullable R> showAndWait();
+}
+
+class DialogPane {
+    // lookupButton returns null when the button type is not registered
+    @Nullable javafx.scene.Node lookupButton(ButtonType buttonType);
 }
 
 package javafx.util;
