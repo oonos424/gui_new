@@ -1,0 +1,26 @@
+---
+description: Project context for AFFr GUI rewrite
+globs:
+alwaysApply: true
+---
+
+# AFFr GUI Rewrite
+
+CFD desktop application built with Java 25 + JavaFX.
+
+## Spec Location
+
+The full product spec (PRD, UI spec, data model, technical design, concepts, development guidelines) is at:
+
+```
+/Users/2tk8sb/Documents/affrgui_spec/
+```
+
+Key subdirectories:
+- `PRD/` — product requirements
+- `ui_spec/` — UI specification
+- `data_model/` — data model
+- `technical_design/` — technical design
+- `concepts/` — domain concepts
+- `development_guidelines/` — dev guidelines
+- `repository_structure/` — repo/build structure
