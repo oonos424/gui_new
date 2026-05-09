@@ -156,8 +156,8 @@ public final class UserPreferences {
   }
 
   /**
-   * Returns the saved file-browser view mode name (e.g. {@code "LIST"}, {@code "ICON"},
-   * {@code "TREE"}), or {@code null} if none has been saved yet.
+   * Returns the saved file-browser view mode name (e.g. {@code "LIST"}, {@code "ICON"}, {@code
+   * "TREE"}), or {@code null} if none has been saved yet.
    */
   public @Nullable String browserViewMode() {
     return browserViewMode;
