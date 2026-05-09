@@ -142,9 +142,7 @@ final class CtlReaderTest {
   void cavitationSectionDetected(@TempDir Path tmp) throws IOException {
     Path ctl =
         writeCtl(
-            tmp,
-            "&model\n  flow = 'incompressible',\n/\n"
-                + "&cavitation\n  some_param = 1,\n/\n");
+            tmp, "&model\n  flow = 'incompressible',\n/\n" + "&cavitation\n  some_param = 1,\n/\n");
 
     assertTrue(CtlReader.read(ctl).extraModelSet().contains(ExtraModel.CAVITATION));
   }
@@ -161,8 +159,7 @@ final class CtlReaderTest {
   void combustionFlameletSectionDetected(@TempDir Path tmp) throws IOException {
     Path ctl =
         writeCtl(
-            tmp,
-            "&model\n  flow = 'compressible',\n/\n" + "&flamelet\n  table = 'file.tbl',\n/\n");
+            tmp, "&model\n  flow = 'compressible',\n/\n" + "&flamelet\n  table = 'file.tbl',\n/\n");
 
     assertTrue(CtlReader.read(ctl).extraModelSet().contains(ExtraModel.COMBUSTION));
   }

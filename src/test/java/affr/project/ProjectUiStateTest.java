@@ -97,8 +97,7 @@ final class ProjectUiStateTest {
     // Write a syntactically valid properties file but with a value that is
     // not a valid path on any platform (null character).  Path.of() will
     // throw an InvalidPathException, which getCtlLastDir() must swallow.
-    Files.writeString(
-        projDir.resolve(ProjectUiState.FILENAME), "ctl.lastDir=\u0000invalid\n");
+    Files.writeString(projDir.resolve(ProjectUiState.FILENAME), "ctl.lastDir=\u0000invalid\n");
 
     ProjectUiState state = ProjectUiState.load(projDir);
     assertNull(state.getCtlLastDir(), "corrupt path value should degrade to null");
