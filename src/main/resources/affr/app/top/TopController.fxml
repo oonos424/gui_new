@@ -15,6 +15,7 @@
 <?import javafx.scene.layout.StackPane?>
 
 <BorderPane
+    fx:id="rootPane"
     xmlns:fx="http://javafx.com/fxml"
     fx:controller="affr.app.top.TopController"
     stylesheets="@top.css">
@@ -27,13 +28,25 @@
   <top>
     <BorderPane prefHeight="50.0" styleClass="app-header">
 
-      <!-- App title — always visible -->
+      <!-- App title + back/home navigation (back nav hidden on browser screens) -->
       <left>
-        <Label text="AFFr" styleClass="app-title" BorderPane.alignment="CENTER">
+        <HBox alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
           <BorderPane.margin>
-            <Insets left="12.0"/>
+            <Insets left="8.0"/>
           </BorderPane.margin>
-        </Label>
+          <!-- Back / Home buttons — shown when a project is open -->
+          <HBox fx:id="headerBackNav" visible="false" managed="false"
+                spacing="4.0" alignment="CENTER_LEFT">
+            <Button fx:id="headerBackButton" text="←  Back" styleClass="header-nav-up-button"/>
+            <Button fx:id="headerHomeButton" text="⌂  Home" styleClass="header-nav-up-button"/>
+          </HBox>
+          <!-- App title — shown on the browser screens -->
+          <Label fx:id="appTitleLabel" text="AFFr" styleClass="app-title">
+            <HBox.margin>
+              <Insets left="4.0"/>
+            </HBox.margin>
+          </Label>
+        </HBox>
       </left>
 
       <!-- Category-specific navigation controls — shown/hidden by TopController -->

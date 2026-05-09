@@ -73,14 +73,17 @@ public final class FileBrowserController {
                   }
                 });
 
-    // Double-click navigates into the selected entry.
+    // Double-click: navigate into a folder, or signal project-open for a project.
     requireItemList()
         .setOnMouseClicked(
             event -> {
               if (event.getClickCount() == 2) {
                 BrowserEntry selected = requireItemList().getSelectionModel().getSelectedItem();
                 if (selected != null) {
-                  navigateTo(selected.path());
+                  switch (selected) {
+                    case FolderEntry f -> navigateTo(f.path());
+                    case ProjectEntry p -> requireViewModel().setOpeningProject(p);
+                  }
                 }
               }
             });

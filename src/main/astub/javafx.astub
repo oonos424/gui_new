@@ -52,3 +52,15 @@ class Dialog<R> {
     // 907
     final void setOnShowing(@UnknownInitialization Dialog<R> this, EventHandler<DialogEvent> value);
 }
+
+package javafx.util;
+// StringConverter.toString() receives null when no item is selected in a ChoiceBox or ComboBox.
+abstract class StringConverter<T> {
+    abstract String toString(@Nullable T object);
+}
+
+package javafx.concurrent;
+class Task<V> {
+    @Nullable V getValue();
+    @Nullable Throwable getException();
+}

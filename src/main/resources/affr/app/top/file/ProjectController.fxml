@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+  Root node for the Project Item List view. Placed into TopController's viewerPane
+  (which occupies the full center area when the category list is hidden).
+
+  Left  (MANAGER, 300 px) — project name, sort control, item list, add button.
+  Center (VIEWER)          — placeholder; replaced by the Execution domain in a later phase.
+-->
+<BorderPane
+    xmlns:fx="http://javafx.com/fxml"
+    fx:controller="affr.app.top.file.ProjectController"
+    stylesheets="@project.css">
+
+  <!-- ── MANAGER (left, fixed 300 px) ───────────────────────────────────── -->
+  <left>
+    <BorderPane prefWidth="300.0" styleClass="project-manager">
+
+      <!-- Project name + sort controls -->
+      <top>
+        <VBox styleClass="project-manager-header">
+          <padding>
+            <Insets top="12.0" right="12.0" bottom="8.0" left="12.0"/>
+          </padding>
+          <Label fx:id="projectNameLabel" styleClass="project-name-label" text=""/>
+          <HBox spacing="6.0" alignment="CENTER_LEFT">
+            <padding>
+              <Insets top="6.0"/>
+            </padding>
+            <Label text="Sort:" styleClass="sort-label"/>
+            <ChoiceBox fx:id="sortChoiceBox"/>
+          </HBox>
+        </VBox>
+      </top>
+
+      <!-- Item list -->
+      <center>
+        <ListView fx:id="itemList" styleClass="item-list"/>
+      </center>
+
+      <!-- Add item button -->
+      <bottom>
+        <HBox styleClass="add-button-bar">
+          <padding>
+            <Insets top="8.0" right="12.0" bottom="12.0" left="12.0"/>
+          </padding>
+          <Button fx:id="addItemButton" text="+" styleClass="add-item-button"/>
+        </HBox>
+      </bottom>
+
+    </BorderPane>
+  </left>
+
+  <!-- ── VIEWER (center — placeholder until Execution domain is implemented) -->
+  <center>
+    <StackPane styleClass="project-viewer">
+      <Label
+          fx:id="viewerPlaceholder"
+          styleClass="viewer-placeholder-label"
+          text="Select a calculation to see details."/>
+    </StackPane>
+  </center>
+
+</BorderPane>
