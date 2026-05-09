@@ -88,4 +88,45 @@ final class AFFrCalPropertyTest {
     assertEquals(execFiles, p.execFiles());
     assertEquals(usrsubCheck, p.usrsubCheck());
   }
+
+  // ── withStatus ─────────────────────────────────────────────────────────────
+
+  @Test
+  void withStatusChangesOnlyStatus() {
+    Map<String, String> execFiles = Map.of("fflow", "/usr/bin/fflow");
+    Map<String, Boolean> usrsubCheck = Map.of("sub1", true);
+
+    AFFrCalProperty original =
+        new AFFrCalProperty(
+            CalculationStatus.CALCULATED,
+            "2026-05-01",
+            500,
+            "hpc-server",
+            "job-42",
+            "queue-A",
+            8,
+            true,
+            execFiles,
+            usrsubCheck);
+
+    AFFrCalProperty result = original.withStatus(CalculationStatus.SETTING);
+
+    assertEquals(CalculationStatus.SETTING, result.status());
+    assertEquals(original.date(), result.date());
+    assertEquals(original.timeStep(), result.timeStep());
+    assertEquals(original.host(), result.host());
+    assertEquals(original.jobId(), result.jobId());
+    assertEquals(original.queueName(), result.queueName());
+    assertEquals(original.ncpu(), result.ncpu());
+    assertEquals(original.userSubrtUsed(), result.userSubrtUsed());
+    assertEquals(original.execFiles(), result.execFiles());
+    assertEquals(original.usrsubCheck(), result.usrsubCheck());
+  }
+
+  @Test
+  void withStatusDoesNotMutateOriginal() {
+    AFFrCalProperty original = AFFrCalProperty.DEFAULT;
+    original.withStatus(CalculationStatus.CALCULATED);
+    assertEquals(CalculationStatus.SETTING, original.status());
+  }
 }

@@ -12,6 +12,7 @@ import affr.util.i18n.I18n;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -125,14 +126,16 @@ public final class ProjectController {
 
   @FXML
   private void onAddCalculation() {
-    Optional<AFFrCalculationModel> modelChoice = showNewCalculationDialog();
+    Optional<@Nullable AFFrCalculationModel> modelChoice = showNewCalculationDialog();
     if (modelChoice.isEmpty()) return;
+    @Nullable AFFrCalculationModel chosenModel = modelChoice.get();
+    if (chosenModel == null) return;
 
     ProjectViewModel vm = requireViewModel();
     AFFrProject project = vm.getProject();
     Path projectPath = vm.getProjectPath();
     List<ProjectItem> snapshot = List.copyOf(vm.getProjectItems());
-    AFFrCalculationModel model = modelChoice.get();
+    AFFrCalculationModel model = chosenModel;
 
     Task<AFFrCalculation> task =
         new Task<>() {
@@ -153,9 +156,7 @@ public final class ProjectController {
 
     task.setOnFailed(e -> showError(task.getException()));
 
-    Thread thread = new Thread(task, "affr-cal-creator");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-cal-creator").start(task);
   }
 
   /**
@@ -163,11 +164,14 @@ public final class ProjectController {
    *
    * @return the selected {@link AFFrCalculationModel}, or empty if the user cancelled
    */
-  private Optional<AFFrCalculationModel> showNewCalculationDialog() {
+  private Optional<@Nullable AFFrCalculationModel> showNewCalculationDialog() {
     try {
-      FXMLLoader loader = new FXMLLoader(getClass().getResource("NewCalculationDialog.fxml"));
+      @Nullable URL rawFxml = getClass().getResource("NewCalculationDialog.fxml");
+      if (rawFxml == null) throw new IllegalStateException("NewCalculationDialog.fxml not found");
+      FXMLLoader loader = new FXMLLoader(rawFxml);
       DialogPane dialogPane = loader.load();
       NewCalculationDialogController ctrl = loader.getController();
+      if (ctrl == null) throw new IllegalStateException("FXML controller not set");
       ctrl.setProjectPath(requireViewModel().getProjectPath());
 
       Dialog<AFFrCalculationModel> dialog = new Dialog<>();
@@ -191,14 +195,13 @@ public final class ProjectController {
     TextInputDialog dialog = new TextInputDialog(cal.name());
     dialog.setTitle(I18n.get("project.rename.title"));
     dialog.setHeaderText(I18n.get("project.rename.header"));
-    dialog.setContentText(null);
 
-    Optional<String> result = dialog.showAndWait();
-    if (result.isEmpty()) return;
+    Optional<@Nullable String> result = dialog.showAndWait();
+    if (result.isEmpty() || result.get() == null) return;
 
     String newName = result.get().trim();
     if (newName.isBlank()) {
-      showInlineError(I18n.get("project.rename.errorBlank"));
+      showError(I18n.get("project.rename.errorBlank"));
       return;
     }
     if (newName.equals(cal.name())) return;
@@ -225,9 +228,7 @@ public final class ProjectController {
 
     task.setOnFailed(e -> showError(task.getException()));
 
-    Thread thread = new Thread(task, "affr-cal-rename");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-cal-rename").start(task);
   }
 
   private void onCopyCalculation(AFFrCalculation cal) {
@@ -255,9 +256,7 @@ public final class ProjectController {
 
     task.setOnFailed(e -> showError(task.getException()));
 
-    Thread thread = new Thread(task, "affr-cal-copy");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-cal-copy").start(task);
   }
 
   private void onDeleteCalculations(List<AFFrCalculation> targets) {
@@ -275,7 +274,7 @@ public final class ProjectController {
     }
     confirm.setContentText(I18n.get("project.delete.content"));
 
-    Optional<ButtonType> result = confirm.showAndWait();
+    Optional<@Nullable ButtonType> result = confirm.showAndWait();
     if (result.isEmpty() || result.get() != ButtonType.OK) return;
 
     List<AFFrCalculation> deleted = new ArrayList<>();
@@ -303,9 +302,7 @@ public final class ProjectController {
           showError(task.getException());
         });
 
-    Thread thread = new Thread(task, "affr-cal-delete");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-cal-delete").start(task);
   }
 
   private void onOpenInFinder(AFFrCalculation cal) {
@@ -321,26 +318,21 @@ public final class ProjectController {
 
     task.setOnFailed(e -> showError(task.getException()));
 
-    Thread thread = new Thread(task, "affr-open-finder");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-open-finder").start(task);
   }
 
   // ── Error helpers ──────────────────────────────────────────────────────────
 
-  private void showError(@Nullable Throwable ex) {
-    String message = ex != null ? ex.getMessage() : I18n.get("dialog.error.title");
-    Alert alert = new Alert(Alert.AlertType.ERROR);
-    alert.setTitle(I18n.get("dialog.error.title"));
-    alert.setContentText(message != null ? message : "");
-    alert.showAndWait();
-  }
-
-  private void showInlineError(String message) {
+  private void showError(String message) {
     Alert alert = new Alert(Alert.AlertType.ERROR);
     alert.setTitle(I18n.get("dialog.error.title"));
     alert.setContentText(message);
     alert.showAndWait();
+  }
+
+  private void showError(@Nullable Throwable ex) {
+    String message = ex != null ? ex.getMessage() : null;
+    showError(message != null ? message : I18n.get("dialog.error.title"));
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -523,10 +515,11 @@ public final class ProjectController {
 
     /** Returns all currently selected items that are {@link AFFrCalculation} instances. */
     private List<AFFrCalculation> selectedCalculations() {
-      return getListView().getSelectionModel().getSelectedItems().stream()
-          .filter(AFFrCalculation.class::isInstance)
-          .map(AFFrCalculation.class::cast)
-          .toList();
+      List<AFFrCalculation> result = new ArrayList<>();
+      for (@Nullable ProjectItem item : getListView().getSelectionModel().getSelectedItems()) {
+        if (item instanceof AFFrCalculation c) result.add(c);
+      }
+      return result;
     }
 
     /**

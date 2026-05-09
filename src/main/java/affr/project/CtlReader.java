@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Reads a solver control file ({@code fflow.ctl}) and extracts the high-level physics model
@@ -96,7 +97,9 @@ public final class CtlReader {
     String section = content.substring(start + marker.length(), end);
     Matcher m = KV_PATTERN.matcher(section);
     while (m.find()) {
-      String key = m.group(1).toLowerCase(Locale.ROOT);
+      @Nullable String rawKey = m.group(1);
+      if (rawKey == null) continue;
+      String key = rawKey.toLowerCase(Locale.ROOT);
       // Groups: 2=single-quoted, 3=double-quoted, 4=unquoted
       String value = m.group(2) != null ? m.group(2) : m.group(3) != null ? m.group(3) : m.group(4);
       if (value != null) {

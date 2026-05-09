@@ -1,45 +1,20 @@
 package affr.app.top.file;
 
-import static affr.project.ComprsModel.COMPRESSIBLE;
-import static affr.project.ComprsModel.INCOMPRESSIBLE;
-import static affr.project.ExtraModel.CAVITATION;
-import static affr.project.ExtraModel.COMBUSTION;
-import static affr.project.ExtraModel.COMBUST_CHEM_REACT;
-import static affr.project.ExtraModel.GHOST_FLUID;
-import static affr.project.ExtraModel.MOVING_MESH;
-import static affr.project.ExtraModel.OVERSET_GRID;
-import static affr.project.ExtraModel.PARTICLE_TRACK;
-import static affr.project.ExtraModel.POROUS_MODEL;
-import static affr.project.ExtraModel.RADIATION;
-import static affr.project.ExtraModel.ROTATING_FRAME;
-import static affr.project.ExtraModel.SURFACE_REACTION;
-import static affr.project.ExtraModel.VOF;
-import static affr.project.SteadyModel.STEADY;
-import static affr.project.SteadyModel.UNSTEADY;
-import static affr.project.TurbModel.DNS;
-import static affr.project.TurbModel.LES;
-import static affr.project.TurbModel.NO;
-import static affr.project.TurbModel.RANS;
-
 import affr.project.AFFrCalculationModel;
 import affr.project.ComprsModel;
 import affr.project.CtlReader;
 import affr.project.ExtraModel;
+import affr.project.ModelConstraints;
 import affr.project.ProjectUiState;
 import affr.project.SteadyModel;
 import affr.project.TurbModel;
 import affr.util.i18n.I18n;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -64,48 +39,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   <li>Optional model add-ons via {@link ExtraModel}
  * </ul>
  *
- * <h2>Constraint model</h2>
- *
- * <p>Two maps drive checkbox availability:
- *
- * <ol>
- *   <li>{@link #BASIC_ALLOWED} — for each (comprs, steady, turb) combination, the set of extra
- *       models that are fundamentally compatible.
- *   <li>{@link #EXTRA_COMPATIBLE} — for each extra model, the set of extras that remain compatible
- *       when that extra is selected. Selecting an extra restricts the available set to the
- *       intersection of all selected extras' compatibility sets.
- * </ol>
- *
- * <p>The two maps are intersected on every combo-box or checkbox change. This replaces the legacy
- * raw-integer-matrix approach with a readable, type-safe design that is easy to extend.
+ * <p>Checkbox availability is driven by {@link ModelConstraints#allowedExtras}, which encodes the
+ * domain rules about which combinations are valid.
  */
 public final class NewCalculationDialogController {
-
-  // ── Compatibility data ────────────────────────────────────────────────────
-
-  /**
-   * Groups a (comprs, steady, turb) triple as a map key.
-   *
-   * <p>Using a record gives correct {@code equals}/{@code hashCode} for free.
-   */
-  private record ModeKey(ComprsModel comprs, SteadyModel steady, TurbModel turb) {}
-
-  /**
-   * For each (comprs, steady, turb) combination, the extras that may be enabled at all.
-   *
-   * <p>Any extra absent from the set for the current combination is always disabled, regardless of
-   * what else is selected. Missing keys default to an empty set.
-   */
-  private static final Map<ModeKey, Set<ExtraModel>> BASIC_ALLOWED = buildBasicAllowed();
-
-  /**
-   * For each extra model, the set of extras that remain selectable when <em>that</em> extra is
-   * selected. Selecting extra {@code A} restricts the enabled set to {@code
-   * EXTRA_COMPATIBLE.get(A)}. When multiple extras are selected, the enabled set is the
-   * intersection of all their compatibility sets, then additionally constrained by {@link
-   * #BASIC_ALLOWED}.
-   */
-  private static final Map<ExtraModel, Set<ExtraModel>> EXTRA_COMPATIBLE = buildExtraCompatible();
 
   // ── FXML-injected widgets ──────────────────────────────────────────────────
 
@@ -140,9 +77,9 @@ public final class NewCalculationDialogController {
     setupComboBox(requireSteadyCombo(), SteadyModel.values(), "newCal.steady.");
     setupComboBox(requireTurbCombo(), TurbModel.values(), "newCal.turb.");
 
-    requireFlowCombo().setValue(INCOMPRESSIBLE);
-    requireSteadyCombo().setValue(STEADY);
-    requireTurbCombo().setValue(RANS);
+    requireFlowCombo().setValue(ComprsModel.INCOMPRESSIBLE);
+    requireSteadyCombo().setValue(SteadyModel.STEADY);
+    requireTurbCombo().setValue(TurbModel.RANS);
 
     setupExtraCheckBoxes();
 
@@ -213,7 +150,7 @@ public final class NewCalculationDialogController {
         chooser.showOpenDialog(requireReadFromFileButton().getScene().getWindow());
     if (file == null) return;
 
-    // Persist the chosen directory back to the per-project UI state.
+    // Persist the chosen directory back to the per-project UI state (fast properties-file write).
     if (proj != null) {
       Path chosenDir = file.toPath().getParent();
       if (chosenDir != null) {
@@ -223,15 +160,36 @@ public final class NewCalculationDialogController {
       }
     }
 
-    try {
-      populateFromModel(CtlReader.read(file.toPath()));
-    } catch (IOException e) {
-      Alert alert = new Alert(Alert.AlertType.ERROR);
-      alert.setHeaderText(null);
-      alert.setContentText(I18n.get("newCal.readFromFile.error"));
-      alert.initOwner(requireReadFromFileButton().getScene().getWindow());
-      alert.showAndWait();
-    }
+    // Parse the .ctl file off the JavaFX Application Thread.
+    Button btn = requireReadFromFileButton();
+    btn.setDisable(true);
+    Path ctlPath = file.toPath();
+
+    javafx.concurrent.Task<AFFrCalculationModel> task =
+        new javafx.concurrent.Task<>() {
+          @Override
+          protected AFFrCalculationModel call() throws Exception {
+            return CtlReader.read(ctlPath);
+          }
+        };
+
+    task.setOnSucceeded(
+        e -> {
+          @Nullable AFFrCalculationModel model = task.getValue();
+          if (model != null) populateFromModel(model);
+          btn.setDisable(false);
+        });
+
+    task.setOnFailed(
+        e -> {
+          btn.setDisable(false);
+          Alert alert = new Alert(Alert.AlertType.ERROR);
+          alert.setContentText(I18n.get("newCal.readFromFile.error"));
+          alert.initOwner(btn.getScene().getWindow());
+          alert.showAndWait();
+        });
+
+    Thread.ofVirtual().name("affr-ctl-reader").start(task);
   }
 
   // ── Constraint engine ──────────────────────────────────────────────────────
@@ -239,36 +197,24 @@ public final class NewCalculationDialogController {
   /**
    * Recomputes which extra-model checkboxes are enabled and applies the result.
    *
-   * <p>Algorithm:
-   *
-   * <ol>
-   *   <li>Look up the base-allowed set for the current (comprs, steady, turb) combination.
-   *   <li>Intersect with the compatibility sets of all currently-selected extras.
-   *   <li>Enable checkboxes in the resulting set; disable and deselect all others.
-   * </ol>
-   *
-   * <p>This method is idempotent and replaces the separate {@code triggerExtraModes} / {@code
-   * triggerCompete} pattern from the legacy codebase.
+   * <p>Delegates the domain constraint logic to {@link ModelConstraints#allowedExtras}. Enable
+   * checkboxes in the resulting set; disable and deselect all others. This method is idempotent.
    */
   private void updateCheckboxStates() {
-    ModeKey key =
-        new ModeKey(
-            requireFlowCombo().getValue(),
-            requireSteadyCombo().getValue(),
-            requireTurbCombo().getValue());
-
-    // Base set from the current required-field combination
-    Set<ExtraModel> allowed = new HashSet<>(BASIC_ALLOWED.getOrDefault(key, Set.of()));
-
-    // Narrow down by each currently-selected extra's compatibility set
     ExtraModel[] allExtras = ExtraModel.values();
+
+    Set<ExtraModel> selected = EnumSet.noneOf(ExtraModel.class);
     for (int i = 0; i < checkList.size(); i++) {
-      if (checkList.get(i).isSelected()) {
-        allowed.retainAll(EXTRA_COMPATIBLE.getOrDefault(allExtras[i], Set.of()));
-      }
+      if (checkList.get(i).isSelected()) selected.add(allExtras[i]);
     }
 
-    // Apply to checkboxes
+    Set<ExtraModel> allowed =
+        ModelConstraints.allowedExtras(
+            requireFlowCombo().getValue(),
+            requireSteadyCombo().getValue(),
+            requireTurbCombo().getValue(),
+            selected);
+
     for (int i = 0; i < checkList.size(); i++) {
       boolean enable = allowed.contains(allExtras[i]);
       CheckBox cb = checkList.get(i);
@@ -329,117 +275,6 @@ public final class NewCalculationDialogController {
             throw new UnsupportedOperationException();
           }
         });
-  }
-
-  // ── Compatibility table builders ───────────────────────────────────────────
-
-  /**
-   * Defines which extras may be enabled for each (comprs, steady, turb) combination.
-   *
-   * <p>Values are derived from the legacy {@code BASIC_EXTRA} matrix, translated into type-safe
-   * {@link EnumSet}s. Missing keys default to {@link Set#of()}.
-   */
-  private static Map<ModeKey, Set<ExtraModel>> buildBasicAllowed() {
-    Map<ModeKey, Set<ExtraModel>> m = new HashMap<>();
-
-    // ── Incompressible ──────────────────────────────────────────────────────
-    // Steady: only combustion-family and rotating frame make sense
-    Set<ExtraModel> incompSteady = extras(COMBUST_CHEM_REACT, COMBUSTION, ROTATING_FRAME);
-    m.put(new ModeKey(INCOMPRESSIBLE, STEADY, LES), extras()); // LES+steady: nothing
-    m.put(new ModeKey(INCOMPRESSIBLE, STEADY, RANS), incompSteady);
-    m.put(new ModeKey(INCOMPRESSIBLE, STEADY, DNS), incompSteady);
-    m.put(new ModeKey(INCOMPRESSIBLE, STEADY, NO), incompSteady);
-
-    // Unsteady: also VOF, cavitation, moving mesh
-    Set<ExtraModel> incompUnsteady =
-        extras(VOF, CAVITATION, COMBUST_CHEM_REACT, COMBUSTION, ROTATING_FRAME, MOVING_MESH);
-    m.put(new ModeKey(INCOMPRESSIBLE, UNSTEADY, LES), incompUnsteady);
-    m.put(new ModeKey(INCOMPRESSIBLE, UNSTEADY, RANS), incompUnsteady);
-    m.put(new ModeKey(INCOMPRESSIBLE, UNSTEADY, DNS), incompUnsteady);
-    m.put(new ModeKey(INCOMPRESSIBLE, UNSTEADY, NO), incompUnsteady);
-
-    // ── Compressible ────────────────────────────────────────────────────────
-    // Steady LES: only radiation-family (no combustion-model by LES rules)
-    m.put(new ModeKey(COMPRESSIBLE, STEADY, LES), extras(RADIATION, SURFACE_REACTION));
-
-    // Steady RANS/DNS/NO: combustion + radiation + rotating
-    Set<ExtraModel> compSteady = extras(COMBUST_CHEM_REACT, COMBUSTION, RADIATION, ROTATING_FRAME);
-    m.put(new ModeKey(COMPRESSIBLE, STEADY, RANS), compSteady);
-    m.put(new ModeKey(COMPRESSIBLE, STEADY, DNS), compSteady);
-    m.put(new ModeKey(COMPRESSIBLE, STEADY, NO), compSteady);
-
-    // Unsteady: also cavitation and moving mesh
-    Set<ExtraModel> compUnsteady =
-        extras(CAVITATION, COMBUST_CHEM_REACT, COMBUSTION, RADIATION, ROTATING_FRAME, MOVING_MESH);
-    m.put(new ModeKey(COMPRESSIBLE, UNSTEADY, LES), compUnsteady);
-    m.put(new ModeKey(COMPRESSIBLE, UNSTEADY, RANS), compUnsteady);
-    m.put(new ModeKey(COMPRESSIBLE, UNSTEADY, DNS), compUnsteady);
-    m.put(new ModeKey(COMPRESSIBLE, UNSTEADY, NO), compUnsteady);
-
-    return Map.copyOf(m);
-  }
-
-  /**
-   * Defines cross-compatibility between extra models.
-   *
-   * <p>For each extra {@code A}, the value is the set of extras (including {@code A} itself) that
-   * remain selectable when {@code A} is selected. Selecting multiple extras restricts availability
-   * to the intersection of their compatible sets.
-   *
-   * <p>Values are derived from the legacy {@code EXTRA_EXTRA} matrix.
-   */
-  private static Map<ExtraModel, Set<ExtraModel>> buildExtraCompatible() {
-    Map<ExtraModel, Set<ExtraModel>> m = new EnumMap<>(ExtraModel.class);
-
-    m.put(VOF, extras(VOF, ROTATING_FRAME));
-    m.put(GHOST_FLUID, extras()); // selecting Ghost Fluid disables all others
-    m.put(CAVITATION, extras(CAVITATION, COMBUST_CHEM_REACT, ROTATING_FRAME, MOVING_MESH));
-    m.put(
-        COMBUST_CHEM_REACT,
-        extras(
-            CAVITATION,
-            COMBUST_CHEM_REACT,
-            RADIATION,
-            SURFACE_REACTION,
-            ROTATING_FRAME,
-            MOVING_MESH));
-    m.put(COMBUSTION, extras(CAVITATION, COMBUSTION, ROTATING_FRAME, MOVING_MESH));
-    m.put(
-        RADIATION,
-        extras(
-            VOF,
-            CAVITATION,
-            COMBUST_CHEM_REACT,
-            RADIATION,
-            SURFACE_REACTION,
-            ROTATING_FRAME,
-            MOVING_MESH));
-    m.put(
-        SURFACE_REACTION,
-        extras(
-            VOF,
-            CAVITATION,
-            COMBUST_CHEM_REACT,
-            RADIATION,
-            SURFACE_REACTION,
-            ROTATING_FRAME,
-            MOVING_MESH));
-    m.put(PARTICLE_TRACK, extras(VOF, CAVITATION, COMBUST_CHEM_REACT, ROTATING_FRAME, MOVING_MESH));
-    m.put(POROUS_MODEL, extras(VOF, CAVITATION, COMBUST_CHEM_REACT, ROTATING_FRAME, MOVING_MESH));
-    m.put(ROTATING_FRAME, extras(VOF, CAVITATION, COMBUST_CHEM_REACT, ROTATING_FRAME));
-    m.put(MOVING_MESH, extras(VOF, CAVITATION, COMBUST_CHEM_REACT, MOVING_MESH, OVERSET_GRID));
-    m.put(OVERSET_GRID, extras(VOF, CAVITATION, COMBUST_CHEM_REACT, MOVING_MESH));
-
-    return Map.copyOf(m);
-  }
-
-  /** Convenience factory: creates an unmodifiable {@link EnumSet} from varargs. */
-  @SafeVarargs
-  private static Set<ExtraModel> extras(ExtraModel... items) {
-    if (items.length == 0) return Set.of();
-    Set<ExtraModel> set = EnumSet.noneOf(ExtraModel.class);
-    for (ExtraModel e : items) set.add(e);
-    return java.util.Collections.unmodifiableSet(set);
   }
 
   // ── Null-guard accessors ───────────────────────────────────────────────────

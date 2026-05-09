@@ -26,4 +26,19 @@ public record AFFrCalProperty(
   public static final AFFrCalProperty DEFAULT =
       new AFFrCalProperty(
           CalculationStatus.SETTING, "", 0, "localhost", "", "未設定", 1, false, Map.of(), Map.of());
+
+  /** Returns a copy of this property with {@code status} replaced by {@code newStatus}. */
+  public AFFrCalProperty withStatus(CalculationStatus newStatus) {
+    return new AFFrCalProperty(
+        newStatus,
+        date,
+        timeStep,
+        host,
+        jobId,
+        queueName,
+        ncpu,
+        userSubrtUsed,
+        execFiles,
+        usrsubCheck);
+  }
 }

@@ -418,9 +418,7 @@ public final class TopController {
           }
         });
 
-    Thread thread = new Thread(task, "affr-project-loader");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-project-loader").start(task);
   }
 
   /**

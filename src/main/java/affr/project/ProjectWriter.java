@@ -157,18 +157,7 @@ public final class ProjectWriter {
             return FileVisitResult.CONTINUE;
           }
         });
-    AFFrCalProperty copiedProperty =
-        new AFFrCalProperty(
-            CalculationStatus.SETTING,
-            cal.getProperty().date(),
-            cal.getProperty().timeStep(),
-            cal.getProperty().host(),
-            cal.getProperty().jobId(),
-            cal.getProperty().queueName(),
-            cal.getProperty().ncpu(),
-            cal.getProperty().userSubrtUsed(),
-            cal.getProperty().execFiles(),
-            cal.getProperty().usrsubCheck());
+    AFFrCalProperty copiedProperty = cal.getProperty().withStatus(CalculationStatus.SETTING);
     writeCalProperty(destDir, copiedProperty);
     return new AFFrCalculation(name, destDir, project, copiedProperty, cal.getModel());
   }

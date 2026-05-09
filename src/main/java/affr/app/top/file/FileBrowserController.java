@@ -396,9 +396,7 @@ public final class FileBrowserController {
             // Leave children empty; the expand arrow stays but shows nothing.
           });
 
-      Thread thread = new Thread(task, "affr-tree-loader");
-      thread.setDaemon(true);
-      thread.start();
+      Thread.ofVirtual().name("affr-tree-loader").start(task);
     }
   }
 
@@ -504,9 +502,7 @@ public final class FileBrowserController {
           alert.showAndWait();
         });
 
-    Thread thread = new Thread(task, "affr-project-creator");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-project-creator").start(task);
   }
 
   /**
@@ -627,9 +623,7 @@ public final class FileBrowserController {
           requireEmptyLabel().setVisible(true);
         });
 
-    Thread thread = new Thread(task, "affr-data-loader");
-    thread.setDaemon(true);
-    thread.start();
+    Thread.ofVirtual().name("affr-data-loader").start(task);
   }
 
   // ── Null-guard helpers ────────────────────────────────────────────────────

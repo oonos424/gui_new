@@ -1,6 +1,7 @@
 package affr.fx.viewmodel.top.file;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,7 +11,10 @@ import affr.project.AFFrCalculationModel;
 import affr.project.AFFrProject;
 import affr.project.ProjectItem;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import javafx.collections.ListChangeListener;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -128,5 +132,84 @@ final class ProjectViewModelTest {
 
     assertEquals(2, viewModel.getProjectItems().size());
     assertTrue(viewModel.getProjectItems().contains(replacement));
+  }
+
+  // ── Observable list ────────────────────────────────────────────────────────
+
+  @Test
+  void getProjectItemsReturnsSameInstanceEveryCall() {
+    ProjectViewModel viewModel = vm();
+    assertSame(viewModel.getProjectItems(), viewModel.getProjectItems());
+  }
+
+  @Test
+  void projectItemsIsPopulatedFromModel() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+
+    assertEquals(1, viewModel.getProjectItems().size());
+    assertSame(cal, viewModel.getProjectItems().get(0));
+  }
+
+  @Test
+  void addItemFiresListChangeListener() {
+    ProjectViewModel viewModel = vm();
+    List<ProjectItem> added = new ArrayList<>();
+    viewModel
+        .getProjectItems()
+        .addListener(
+            (ListChangeListener<ProjectItem>)
+                c -> {
+                  while (c.next()) added.addAll(c.getAddedSubList());
+                });
+
+    AFFrCalculation cal = makeCal("cal_01");
+    viewModel.addItem(cal);
+
+    assertEquals(1, added.size());
+    assertSame(cal, added.get(0));
+  }
+
+  // ── Focused item ───────────────────────────────────────────────────────────
+
+  @Test
+  void focusedItemIsNullInitially() {
+    ProjectViewModel viewModel = vm();
+    assertNull(viewModel.getFocusedItem());
+    assertNull(viewModel.focusedItemProperty().get());
+  }
+
+  @Test
+  void setFocusedItemUpdatesProperty() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+
+    viewModel.setFocusedItem(cal);
+
+    assertSame(cal, viewModel.getFocusedItem());
+    assertSame(cal, viewModel.focusedItemProperty().get());
+  }
+
+  @Test
+  void focusedItemCanBeResetToNull() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+    viewModel.setFocusedItem(cal);
+
+    viewModel.setFocusedItem(null);
+
+    assertNull(viewModel.getFocusedItem());
+  }
+
+  @Test
+  void focusedItemListenerFiresOnChange() {
+    ProjectViewModel viewModel = vm();
+    AtomicInteger calls = new AtomicInteger();
+    viewModel.focusedItemProperty().addListener((obs, o, n) -> calls.incrementAndGet());
+
+    viewModel.setFocusedItem(makeCal("cal_01"));
+    viewModel.setFocusedItem(null);
+
+    assertEquals(2, calls.get());
   }
 }

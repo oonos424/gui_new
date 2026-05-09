@@ -83,11 +83,11 @@ public final class ProjectLoader {
       JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
 
       CalculationStatus status = parseStatus(getString(obj, "status", null));
-      String date = getString(obj, "date", "");
+      String date = requireString(obj, "date", "");
       int timeStep = getInt(obj, "timeStep", 0);
-      String host = getString(obj, "host", "localhost");
-      String jobId = getString(obj, "jobId", "");
-      String queueName = getString(obj, "queueName", "未設定");
+      String host = requireString(obj, "host", "localhost");
+      String jobId = requireString(obj, "jobId", "");
+      String queueName = requireString(obj, "queueName", "未設定");
       int ncpu = getInt(obj, "ncpu", 1);
       boolean userSubrtUsed = getBool(obj, "userSubrtUsed", false);
       Map<String, String> execFiles = parseStringMap(obj, "execFiles");
@@ -170,6 +170,16 @@ public final class ProjectLoader {
   // ── JSON helpers ──────────────────────────────────────────────────────────
 
   private static @Nullable String getString(JsonObject obj, String key, @Nullable String def) {
+    if (!obj.has(key)) return def;
+    try {
+      return obj.get(key).getAsString();
+    } catch (ClassCastException | IllegalStateException ignored) {
+      return def;
+    }
+  }
+
+  /** Variant of {@link #getString} that guarantees a non-null result via a non-null default. */
+  private static String requireString(JsonObject obj, String key, String def) {
     if (!obj.has(key)) return def;
     try {
       return obj.get(key).getAsString();
