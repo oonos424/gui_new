@@ -40,8 +40,10 @@ public final class UserPreferences {
   private Locale locale;
   private double windowWidth;
   private double windowHeight;
+
   /** {@code NaN} means no saved position — the OS should place the window. */
   private double windowX;
+
   private double windowY;
 
   private UserPreferences(
@@ -60,8 +62,8 @@ public final class UserPreferences {
   }
 
   /**
-   * Loads preferences from {@code ~/.affr/preferences.properties}. Returns defaults if the file
-   * is absent or unreadable.
+   * Loads preferences from {@code ~/.affr/preferences.properties}. Returns defaults if the file is
+   * absent or unreadable.
    */
   public static UserPreferences load() {
     return loadFrom(PREFS_FILE);
@@ -142,7 +144,10 @@ public final class UserPreferences {
   /** Writes current preferences to the file this instance was loaded from. */
   public void save() {
     try {
-      Files.createDirectories(prefsFile.getParent());
+      Path parent = prefsFile.getParent();
+      if (parent != null) {
+        Files.createDirectories(parent);
+      }
       Properties props = new Properties();
       props.setProperty(KEY_LANGUAGE, locale.getLanguage());
       props.setProperty(KEY_WINDOW_WIDTH, String.valueOf(windowWidth));

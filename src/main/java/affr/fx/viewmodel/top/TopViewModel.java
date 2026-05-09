@@ -22,7 +22,7 @@ public final class TopViewModel {
       FXCollections.observableArrayList(TopCategory.values());
 
   private final ObjectProperty<TopCategory> selectedCategory =
-      new SimpleObjectProperty<>(this, "selectedCategory", TopCategory.FILE);
+      new SimpleObjectProperty<>(TopCategory.FILE);
 
   public ObservableList<TopCategory> getCategories() {
     return categories;

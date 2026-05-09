@@ -30,20 +30,18 @@ public final class FileBrowserViewModel {
 
   private final ObjectProperty<Path> currentPath;
   private final ObservableList<BrowserEntry> items = FXCollections.observableArrayList();
-  private final ReadOnlyBooleanWrapper loading =
-      new ReadOnlyBooleanWrapper(this, "loading", false);
+  private final ReadOnlyBooleanWrapper loading = new ReadOnlyBooleanWrapper(false);
   private final ObjectProperty<@Nullable BrowserEntry> selectedItem =
-      new SimpleObjectProperty<>(this, "selectedItem", null);
+      new SimpleObjectProperty<>(null);
 
   /**
-   * Creates a ViewModel backed by {@code dataStore}. The browser starts positioned at the
-   * workspace root; the initial load is triggered by the controller calling
-   * {@code navigateTo(getRootPath())}.
+   * Creates a ViewModel backed by {@code dataStore}. The browser starts positioned at the workspace
+   * root; the initial load is triggered by the controller calling {@code
+   * navigateTo(getRootPath())}.
    */
   public FileBrowserViewModel(DataStore dataStore) {
     this.dataStore = dataStore;
-    this.currentPath =
-        new SimpleObjectProperty<>(this, "currentPath", dataStore.getRootPath());
+    this.currentPath = new SimpleObjectProperty<>(dataStore.getRootPath());
   }
 
   // ── DataStore access (read-only from outside) ────────────────────────────

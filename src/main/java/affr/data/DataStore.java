@@ -11,9 +11,8 @@ import java.util.List;
  * Master data controller for the AFFr workspace.
  *
  * <p>Owns the root workspace path and is responsible for loading the browser-level view of the
- * filesystem as typed domain objects ({@link BrowserEntry}). It is the single place in the
- * codebase where raw filesystem paths are interpreted as AFFr domain concepts (projects vs. plain
- * folders).
+ * filesystem as typed domain objects ({@link BrowserEntry}). It is the single place in the codebase
+ * where raw filesystem paths are interpreted as AFFr domain concepts (projects vs. plain folders).
  *
  * <p>All methods that perform IO must be called from a background thread — never from the JavaFX
  * Application Thread. Observable state (item lists, loading flags) lives in the ViewModel layer;
@@ -39,15 +38,15 @@ public final class DataStore {
   }
 
   /**
-   * Lists the direct child entries of {@code dir} as typed domain objects, sorted so that
-   * {@link ProjectEntry} items come before {@link FolderEntry} items; within each group entries
-   * are sorted case-insensitively by name.
+   * Lists the direct child entries of {@code dir} as typed domain objects, sorted so that {@link
+   * ProjectEntry} items come before {@link FolderEntry} items; within each group entries are sorted
+   * case-insensitively by name.
    *
    * <p>If {@code dir} does not exist it is created before listing (first-run initialisation).
    *
    * @param dir the directory to list; normally the workspace root or a sub-folder
    * @return immutable list of browser entries; empty if the directory contains no visible
-   *         sub-directories
+   *     sub-directories
    * @throws IOException if the directory cannot be created or listed
    */
   public List<BrowserEntry> loadChildren(Path dir) throws IOException {
@@ -75,8 +74,8 @@ public final class DataStore {
   }
 
   /**
-   * Reads the memo text from a {@code .affr_project} file. Returns an empty string if the file
-   * is unreadable or contains only whitespace.
+   * Reads the memo text from a {@code .affr_project} file. Returns an empty string if the file is
+   * unreadable or contains only whitespace.
    */
   private static String readMemo(Path markerFile) {
     try {

@@ -2,16 +2,15 @@ package affr.app.top;
 
 import affr.app.top.file.FileBrowserController;
 import affr.data.DataStore;
-import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
+import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.util.i18n.I18n;
 import affr.util.prefs.UserPreferences;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Locale;
-import java.util.Objects;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -35,8 +34,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * only), then the application calls {@link #init(TopViewModel, UserPreferences, DataStore)} to wire
  * bindings.
  *
- * <p>The header navigation area ({@code headerNav}) is shared chrome owned by this controller.
- * It is shown and wired to the {@link FileBrowserViewModel} when the FILE category is active, and
+ * <p>The header navigation area ({@code headerNav}) is shared chrome owned by this controller. It
+ * is shown and wired to the {@link FileBrowserViewModel} when the FILE category is active, and
  * hidden for all other categories.
  */
 public final class TopController {
@@ -204,6 +203,7 @@ public final class TopController {
    * Returns the file-browser node, creating and wiring everything on the first call.
    *
    * <p>On first call:
+   *
    * <ol>
    *   <li>Loads {@code FileBrowserController.fxml}.
    *   <li>Creates a {@link FileBrowserViewModel} backed by the {@link DataStore}.
@@ -213,14 +213,14 @@ public final class TopController {
    */
   private Node requireFileBrowserNode() {
     if (fileBrowserNode == null) {
-      URL fxml =
-          Objects.requireNonNull(
-              FileBrowserController.class.getResource("FileBrowserController.fxml"),
-              "FileBrowserController.fxml not found on classpath");
+      URL fxml = requireResource(FileBrowserController.class, "FileBrowserController.fxml");
       FXMLLoader loader = new FXMLLoader(fxml);
       try {
         Node node = loader.load();
         FileBrowserController controller = loader.getController();
+        if (controller == null) {
+          throw new IllegalStateException("FileBrowserController was not set by FXMLLoader");
+        }
         FileBrowserViewModel fbViewModel = new FileBrowserViewModel(requireDataStore());
         controller.init(fbViewModel);
 
@@ -233,7 +233,11 @@ public final class TopController {
         throw new IllegalStateException("Failed to load FileBrowserController.fxml", e);
       }
     }
-    return fileBrowserNode;
+    Node node = fileBrowserNode;
+    if (node == null) {
+      throw new IllegalStateException("fileBrowserNode was not initialized");
+    }
+    return node;
   }
 
   /**
@@ -263,8 +267,7 @@ public final class TopController {
     // Up button disabled at root
     requireHeaderNavUpButton()
         .disableProperty()
-        .bind(
-            Bindings.createBooleanBinding(vm::isAtRoot, vm.currentPathProperty()));
+        .bind(Bindings.createBooleanBinding(vm::isAtRoot, vm.currentPathProperty()));
   }
 
   /** Formats a path as {@code ~/.affr} or {@code ~/.affr/relative/sub/path}. */
@@ -273,6 +276,14 @@ public final class TopController {
       return "~/.affr";
     }
     return "~/.affr/" + root.relativize(current);
+  }
+
+  private static URL requireResource(Class<?> owner, String resourceName) {
+    URL url = owner.getResource(resourceName);
+    if (url == null) {
+      throw new IllegalStateException(resourceName + " not found on classpath");
+    }
+    return url;
   }
 
   private void syncLanguageMenu(Locale locale) {

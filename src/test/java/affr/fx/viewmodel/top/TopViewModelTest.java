@@ -1,6 +1,7 @@
 package affr.fx.viewmodel.top;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -95,12 +96,12 @@ final class TopViewModelTest {
 
   @Test
   void selectedCategoryPropertyExposesBeanAndName() {
-    // Bean metadata is part of the JavaFX-bean contract; useful for debug tooling and
-    // anything that introspects properties (e.g. Scene Builder, reflective binders).
+    // This ViewModel does not rely on JavaFX bean/name metadata; only value and observability
+    // contracts are required.
     TopViewModel vm = new TopViewModel();
 
-    assertSame(vm, vm.selectedCategoryProperty().getBean());
-    assertEquals("selectedCategory", vm.selectedCategoryProperty().getName());
+    assertEquals("", vm.selectedCategoryProperty().getName());
+    assertNull(vm.selectedCategoryProperty().getBean());
   }
 
   @Test

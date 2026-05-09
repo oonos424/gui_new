@@ -5,8 +5,8 @@ import java.nio.file.Path;
 /**
  * A single entry shown in the File-browser view.
  *
- * <p>Sealed so that the compiler can verify exhaustive pattern-matching in switch expressions.
- * Only two kinds exist: a plain navigable {@link FolderEntry} and an AFFr {@link ProjectEntry}.
+ * <p>Sealed so that the compiler can verify exhaustive pattern-matching in switch expressions. Only
+ * two kinds exist: a plain navigable {@link FolderEntry} and an AFFr {@link ProjectEntry}.
  *
  * <p>Both subtypes are records, ensuring value-based equality and immutability.
  */

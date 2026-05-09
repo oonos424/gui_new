@@ -6,7 +6,6 @@ import affr.fx.viewmodel.top.TopViewModel;
 import affr.util.prefs.UserPreferences;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Objects;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
@@ -39,13 +38,16 @@ public final class NavigationService {
     TopViewModel viewModel = new TopViewModel();
     DataStore dataStore = new DataStore(UserPreferences.APP_DIR);
 
-    URL fxml =
-        Objects.requireNonNull(
-            TopController.class.getResource("TopController.fxml"),
-            "TopController.fxml not found on classpath");
+    URL fxml = requireResource(TopController.class, "TopController.fxml");
     FXMLLoader loader = new FXMLLoader(fxml);
     Parent root = loader.load();
+    if (root == null) {
+      throw new IllegalStateException("Loaded TopController root is null");
+    }
     TopController controller = loader.getController();
+    if (controller == null) {
+      throw new IllegalStateException("TopController was not set by FXMLLoader");
+    }
     controller.init(viewModel, prefs, dataStore);
 
     Scene scene = new Scene(root, prefs.windowWidth(), prefs.windowHeight());
@@ -92,5 +94,13 @@ public final class NavigationService {
       if (bounds.contains(x, y)) return true;
     }
     return false;
+  }
+
+  private static URL requireResource(Class<?> owner, String resourceName) {
+    URL url = owner.getResource(resourceName);
+    if (url == null) {
+      throw new IllegalStateException(resourceName + " not found on classpath");
+    }
+    return url;
   }
 }

@@ -9,10 +9,9 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 /**
  * Application-level i18n accessor.
  *
- * <p>Backed by resource bundles at {@code affr/util/i18n/messages[_locale].properties}. Call
- * {@link #setLocale} once at startup (and again when the user changes language) to replace the
- * active bundle. UI components that need to refresh their labels should listen to {@link
- * #bundleProperty}.
+ * <p>Backed by resource bundles at {@code affr/util/i18n/messages[_locale].properties}. Call {@link
+ * #setLocale} once at startup (and again when the user changes language) to replace the active
+ * bundle. UI components that need to refresh their labels should listen to {@link #bundleProperty}.
  *
  * <p>All methods are safe to call from the JavaFX Application Thread.
  */

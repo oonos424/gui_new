@@ -108,7 +108,7 @@ final class DataStoreTest {
 
   @Test
   void withinProjectGroupSortIsCaseInsensitive(@TempDir Path root) throws IOException {
-    for (String name : new String[]{"Zeta", "alpha", "Mango"}) {
+    for (String name : new String[] {"Zeta", "alpha", "Mango"}) {
       Path p = Files.createDirectory(root.resolve(name));
       Files.createFile(p.resolve(PROJECT_MARKER));
     }
@@ -120,7 +120,7 @@ final class DataStoreTest {
 
   @Test
   void withinFolderGroupSortIsCaseInsensitive(@TempDir Path root) throws IOException {
-    for (String name : new String[]{"Zeta", "alpha", "Mango"}) {
+    for (String name : new String[] {"Zeta", "alpha", "Mango"}) {
       Files.createDirectory(root.resolve(name));
     }
     DataStore store = new DataStore(root);

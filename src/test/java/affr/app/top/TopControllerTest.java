@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import affr.data.DataStore;
-import affr.util.prefs.UserPreferences;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
+import affr.util.prefs.UserPreferences;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;

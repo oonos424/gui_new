@@ -8,10 +8,34 @@ import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 package javafx.fxml;
 class FXMLLoader {
     <T> T load() throws java.io.IOException;
-    <T> T getController();
+    <T> @Nullable T getController();
+}
+
+package javafx.beans.property;
+class ReadOnlyBooleanWrapper {
+    ReadOnlyBooleanWrapper(@UnknownInitialization Object bean, String name, boolean initialValue);
+}
+class SimpleObjectProperty<T> {
+    SimpleObjectProperty(@UnknownInitialization Object bean, String name, @Nullable T initialValue);
+}
+
+package javafx.scene;
+class Node {
+    final javafx.beans.property.ReadOnlyBooleanProperty hoverProperty(@UnknownInitialization Node this);
+    final boolean isHover(@UnknownInitialization Node this);
+    final void setStyle(@UnknownInitialization Node this, String value);
 }
 
 package javafx.scene.control;
+class Labeled {
+    final void setText(@UnknownInitialization Labeled this, @Nullable String value);
+    final void setGraphic(@UnknownInitialization Labeled this, @Nullable javafx.scene.Node value);
+}
+class Cell<T> {
+    final boolean isSelected(@UnknownInitialization Cell<T> this);
+    final javafx.beans.property.ReadOnlyBooleanProperty selectedProperty(@UnknownInitialization Cell<T> this);
+    protected void updateItem(@Nullable T item, boolean empty);
+}
 class Dialog<R> {
     // 355
     final void close(@UnknownInitialization Dialog<R> this);

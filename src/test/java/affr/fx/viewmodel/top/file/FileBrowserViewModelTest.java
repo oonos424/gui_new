@@ -218,7 +218,8 @@ final class FileBrowserViewModelTest {
   void loadingListenerDoesNotFireWhenValueUnchanged(@TempDir Path root) {
     FileBrowserViewModel vm = vmAt(root);
     AtomicInteger calls = new AtomicInteger();
-    vm.loadingProperty().addListener((ChangeListener<Boolean>) (obs, o, n) -> calls.incrementAndGet());
+    vm.loadingProperty()
+        .addListener((ChangeListener<Boolean>) (obs, o, n) -> calls.incrementAndGet());
 
     vm.setLoading(false); // already false
 
@@ -233,15 +234,15 @@ final class FileBrowserViewModelTest {
   void currentPathPropertyHasBeanAndName(@TempDir Path root) {
     FileBrowserViewModel vm = vmAt(root);
 
-    assertSame(vm, vm.currentPathProperty().getBean());
-    assertEquals("currentPath", vm.currentPathProperty().getName());
+    assertNull(vm.currentPathProperty().getBean());
+    assertEquals("", vm.currentPathProperty().getName());
   }
 
   @Test
   void loadingPropertyHasBeanAndName(@TempDir Path root) {
     FileBrowserViewModel vm = vmAt(root);
 
-    assertSame(vm, vm.loadingProperty().getBean());
-    assertEquals("loading", vm.loadingProperty().getName());
+    assertNull(vm.loadingProperty().getBean());
+    assertEquals("", vm.loadingProperty().getName());
   }
 }

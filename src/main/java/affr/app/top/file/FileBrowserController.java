@@ -25,6 +25,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * {@code currentPathProperty()} directly.
  *
  * <p>Responsibilities:
+ *
  * <ul>
  *   <li>Bind the {@link ListView} to the ViewModel's item list.
  *   <li>Schedule background IO via {@link Task} when navigating.
@@ -117,8 +118,7 @@ public final class FileBrowserController {
   /**
    * Navigates up to the parent directory (clamped to the workspace root).
    *
-   * <p>Called by the app header's Up button, which is wired by {@link
-   * affr.app.top.TopController}.
+   * <p>Called by the app header's Up button, which is wired by {@link affr.app.top.TopController}.
    */
   public void navigateUp() {
     FileBrowserViewModel vm = requireViewModel();
@@ -173,8 +173,7 @@ public final class FileBrowserController {
 
   private ProgressIndicator requireLoadingIndicator() {
     ProgressIndicator pi = loadingIndicator;
-    if (pi == null)
-      throw new IllegalStateException("loadingIndicator not injected by FXMLLoader");
+    if (pi == null) throw new IllegalStateException("loadingIndicator not injected by FXMLLoader");
     return pi;
   }
 

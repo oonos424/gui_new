@@ -9,8 +9,8 @@ import java.util.stream.Stream;
 /**
  * Raw filesystem IO: lists the direct child directories of a given path.
  *
- * <p>This class has no knowledge of AFFr domain concepts (projects, calculations, etc.) — it
- * knows only about the filesystem. Domain interpretation lives in {@code affr.data.DataStore}.
+ * <p>This class has no knowledge of AFFr domain concepts (projects, calculations, etc.) — it knows
+ * only about the filesystem. Domain interpretation lives in {@code affr.data.DataStore}.
  *
  * <p>All public methods perform IO and must be called from a background thread, never from the
  * JavaFX Application Thread.
@@ -20,8 +20,8 @@ public final class FsLoader {
   private FsLoader() {}
 
   /**
-   * Returns the direct child directories of {@code dir}, sorted case-insensitively by name.
-   * Hidden entries (names starting with {@code .}) are excluded.
+   * Returns the direct child directories of {@code dir}, sorted case-insensitively by name. Hidden
+   * entries (names starting with {@code .}) are excluded.
    *
    * @param dir the directory to list; must exist and be readable
    * @throws IOException if the directory cannot be listed
