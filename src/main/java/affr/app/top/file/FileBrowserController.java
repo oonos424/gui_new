@@ -604,7 +604,8 @@ public final class FileBrowserController {
 
     task.setOnSucceeded(
         e -> {
-          vm.setItems(task.getValue());
+          List<BrowserEntry> loaded = task.getValue();
+          vm.setItems(loaded != null ? loaded : List.of());
           vm.setLoading(false);
           requireEmptyLabel().setVisible(vm.getItems().isEmpty());
 

@@ -427,6 +427,7 @@ public final class TopController {
    * Loads and displays the {@link ProjectController} for the given project. Hides the category list
    * and shows the back/home navigation buttons.
    */
+  @SuppressWarnings("nullness") // BorderPane.setLeft(null) is the JavaFX API to clear the region
   private void showProject(AFFrProject project) {
     ProjectViewModel pvm = new ProjectViewModel(project);
     URL fxml = requireResource(ProjectController.class, "ProjectController.fxml");
@@ -436,6 +437,9 @@ public final class TopController {
       node = loader.load();
     } catch (IOException e) {
       throw new IllegalStateException("Failed to load ProjectController.fxml", e);
+    }
+    if (node == null) {
+      throw new IllegalStateException("FXMLLoader returned null node for ProjectController.fxml");
     }
     ProjectController controller = loader.getController();
     if (controller == null) {

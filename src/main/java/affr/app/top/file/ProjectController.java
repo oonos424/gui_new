@@ -77,7 +77,11 @@ public final class ProjectController {
         .addListener(
             (obs, old, item) -> {
               if (!Objects.equals(item, requireItemList().getSelectionModel().getSelectedItem())) {
-                requireItemList().getSelectionModel().select(item);
+                if (item != null) {
+                  requireItemList().getSelectionModel().select(item);
+                } else {
+                  requireItemList().getSelectionModel().clearSelection();
+                }
               }
             });
 
@@ -123,8 +127,7 @@ public final class ProjectController {
   private void refreshSortChoiceBoxLabels() {
     ChoiceBox<ProjectSortOrder> box = requireSortChoiceBox();
     @Nullable ProjectSortOrder current = box.getValue();
-    // Re-setting the converter triggers a re-render of the displayed selection label.
-    box.setConverter(null);
+    // Assigning a new converter instance triggers ChoiceBox to re-render the displayed label.
     box.setConverter(makeSortConverter());
     if (current != null) {
       box.setValue(current);

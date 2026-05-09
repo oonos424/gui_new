@@ -28,7 +28,7 @@ public final class AFFrProject {
   // Transient: not persisted in this phase. Focus is restored only when .current_focus
   // persistence is implemented alongside the Input Editor.
   private final ObjectProperty<@Nullable ProjectItem> focusedItem =
-      new SimpleObjectProperty<>(this, "focusedItem", null);
+      new SimpleObjectProperty<>(null);
 
   /**
    * Creates a project with the given metadata and initial item list.
