@@ -132,3 +132,30 @@
     -fx-background-color: #d0e8ff;
     -fx-background-radius: 5;
 }
+
+/* ── Tree view ────────────────────────────────────────────────────────────── */
+
+.entry-tree {
+    -fx-background-color: white;
+    -fx-border-width: 0;
+}
+
+.entry-tree .tree-cell {
+    -fx-padding: 7 14 7 4;
+    -fx-font-size: 14px;
+    -fx-background-color: transparent;
+}
+
+.entry-tree .tree-cell:selected {
+    -fx-background-color: #d0e8ff;
+    -fx-text-fill: #1a1a1a;
+}
+
+.entry-tree .tree-cell:hover:!selected {
+    -fx-background-color: #eaf4ff;
+}
+
+/* Disclosure triangle (expand arrow) */
+.entry-tree .tree-cell > .tree-disclosure-node > .arrow {
+    -fx-background-color: #777777;
+}

@@ -14,5 +14,9 @@ public enum FileBrowserViewMode {
   /** Grid of labelled icon tiles, one per entry. */
   ICON,
 
-  // TREE will be added in a future phase when lazy-loading tree navigation is implemented.
+  /**
+   * Hierarchical tree that lazily loads sub-directories on expansion. Projects are leaves; folders
+   * expand to reveal their contents on demand.
+   */
+  TREE,
 }

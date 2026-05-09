@@ -7,6 +7,8 @@
 <?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
@@ -36,12 +38,19 @@
       <!-- Spacer -->
       <Region HBox.hgrow="ALWAYS"/>
       <!-- View-mode toggle buttons (wired to a ToggleGroup in initialize()) -->
-      <ToggleButton fx:id="listModeButton" text="☰" styleClass="view-mode-button" selected="true"/>
-      <ToggleButton fx:id="iconModeButton" text="⊞" styleClass="view-mode-button"/>
+      <ToggleButton fx:id="listModeButton" text="☰" styleClass="view-mode-button" selected="true">
+        <tooltip><Tooltip text="List view"/></tooltip>
+      </ToggleButton>
+      <ToggleButton fx:id="iconModeButton" text="⊞" styleClass="view-mode-button">
+        <tooltip><Tooltip text="Icon view"/></tooltip>
+      </ToggleButton>
+      <ToggleButton fx:id="treeModeButton" text="⊤" styleClass="view-mode-button">
+        <tooltip><Tooltip text="Tree view"/></tooltip>
+      </ToggleButton>
     </HBox>
   </top>
 
-  <!-- Content area: list view and icon view stacked; overlays on top -->
+  <!-- Content area: list, icon, and tree views stacked; overlays on top -->
   <center>
     <StackPane>
 
@@ -50,7 +59,7 @@
         <ListView fx:id="itemList" styleClass="entry-list"/>
       </StackPane>
 
-      <!-- Icon view (hidden by default; managed by controller) -->
+      <!-- Icon view (hidden by default) -->
       <ScrollPane
           fx:id="iconScrollPane"
           styleClass="icon-scroll-pane"
@@ -63,7 +72,14 @@
         </FlowPane>
       </ScrollPane>
 
-      <!-- Shared overlays — shown over both views during loading or when empty -->
+      <!-- Tree view (hidden by default; root set programmatically) -->
+      <TreeView
+          fx:id="treeView"
+          styleClass="entry-tree"
+          showRoot="false"
+          visible="false"/>
+
+      <!-- Shared overlays — shown over all views during loading or when empty -->
       <ProgressIndicator
           fx:id="loadingIndicator"
           maxWidth="44.0"
