@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ButtonType?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DialogPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+  DialogPane for the New Calculation model-selection dialog.
+
+  Left  — required selections: flow type, steady/unsteady, turbulence approach.
+  Right — optional add-on models (CheckBoxes added programmatically by the controller).
+  Below — "Read from existing file…" button.
+  Buttons — OK / Cancel (standard DialogPane button types).
+-->
+<DialogPane
+    xmlns:fx="http://javafx.com/fxml"
+    fx:controller="affr.app.top.file.NewCalculationDialogController"
+    prefWidth="580.0"
+    stylesheets="@new_calculation_dialog.css">
+
+  <buttonTypes>
+    <ButtonType fx:constant="OK"/>
+    <ButtonType fx:constant="CANCEL"/>
+  </buttonTypes>
+
+  <content>
+    <VBox spacing="16.0">
+      <padding>
+        <Insets top="4.0" right="4.0" bottom="4.0" left="4.0"/>
+      </padding>
+
+      <!-- ── Main row: required (left) + separator + optional (right) ── -->
+      <HBox spacing="20.0">
+
+        <!-- LEFT: required combo-box selections -->
+        <VBox fx:id="requiredPane" spacing="6.0" minWidth="180.0" maxWidth="200.0">
+          <Label fx:id="flowLabel" styleClass="section-label"/>
+          <ComboBox fx:id="flowCombo" maxWidth="Infinity"/>
+
+          <Label fx:id="steadyLabel" styleClass="section-label">
+            <VBox.margin>
+              <Insets top="6.0"/>
+            </VBox.margin>
+          </Label>
+          <ComboBox fx:id="steadyCombo" maxWidth="Infinity"/>
+
+          <Label fx:id="turbLabel" styleClass="section-label">
+            <VBox.margin>
+              <Insets top="6.0"/>
+            </VBox.margin>
+          </Label>
+          <ComboBox fx:id="turbCombo" maxWidth="Infinity"/>
+        </VBox>
+
+        <!-- Vertical divider -->
+        <Separator orientation="VERTICAL"/>
+
+        <!-- RIGHT: optional add-on model checkboxes, split into two columns -->
+        <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+          <Label fx:id="extrasLabel" styleClass="section-label"/>
+          <HBox spacing="24.0">
+            <padding>
+              <Insets top="4.0"/>
+            </padding>
+            <VBox fx:id="vboxExtraLeft" spacing="4.0"/>
+            <VBox fx:id="vboxExtraRight" spacing="4.0"/>
+          </HBox>
+        </VBox>
+
+      </HBox>
+
+      <!-- ── Read-from-file row ── -->
+      <HBox>
+        <Separator>
+          <VBox.margin>
+            <Insets bottom="4.0"/>
+          </VBox.margin>
+        </Separator>
+      </HBox>
+      <HBox>
+        <Button fx:id="readFromFileButton" onAction="#onReadFromFile" styleClass="read-file-button"/>
+      </HBox>
+
+    </VBox>
+  </content>
+
+</DialogPane>

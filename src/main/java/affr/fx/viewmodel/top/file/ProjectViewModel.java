@@ -95,6 +95,29 @@ public final class ProjectViewModel {
     project.getItems().add(item);
   }
 
+  /**
+   * Removes {@code item} from the project's item list. Must be called on the JavaFX Application
+   * Thread.
+   */
+  public void removeItem(ProjectItem item) {
+    project.getItems().remove(item);
+  }
+
+  /**
+   * Replaces {@code old} with {@code replacement} in the project's item list, preserving position.
+   * If {@code old} is not found, {@code replacement} is appended. Must be called on the JavaFX
+   * Application Thread.
+   */
+  public void replaceItem(ProjectItem old, ProjectItem replacement) {
+    ObservableList<ProjectItem> items = project.getItems();
+    int index = items.indexOf(old);
+    if (index >= 0) {
+      items.set(index, replacement);
+    } else {
+      items.add(replacement);
+    }
+  }
+
   // ── Focused item (forwarded from AFFrProject) ─────────────────────────────
 
   public ObjectProperty<@Nullable ProjectItem> focusedItemProperty() {

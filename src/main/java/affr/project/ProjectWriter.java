@@ -4,8 +4,12 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 
 /**
@@ -25,7 +29,8 @@ public final class ProjectWriter {
 
   /**
    * Creates a new calculation inside {@code projectPath} with the next available sequential name
-   * ({@code cal_01}, {@code cal_02}, …) and default property and model files.
+   * ({@code cal_01}, {@code cal_02}, …), default property, and {@link AFFrCalculationModel#DEFAULT
+   * default model}.
    *
    * @param projectPath absolute path to the project directory
    * @param existingItems the current items in the project; used to determine the next name
@@ -36,6 +41,26 @@ public final class ProjectWriter {
   public static AFFrCalculation createCalculation(
       Path projectPath, List<? extends ProjectItem> existingItems, AFFrProject project)
       throws IOException {
+    return createCalculation(projectPath, existingItems, project, AFFrCalculationModel.DEFAULT);
+  }
+
+  /**
+   * Creates a new calculation inside {@code projectPath} with the next available sequential name
+   * ({@code cal_01}, {@code cal_02}, …), default property, and the supplied {@code model}.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param existingItems the current items in the project; used to determine the next name
+   * @param project the owning project (set as the back-reference on the new calculation)
+   * @param model the physics model selection chosen by the user
+   * @return the newly created {@link AFFrCalculation}
+   * @throws IOException if the directory or any file cannot be created
+   */
+  public static AFFrCalculation createCalculation(
+      Path projectPath,
+      List<? extends ProjectItem> existingItems,
+      AFFrProject project,
+      AFFrCalculationModel model)
+      throws IOException {
     String name = nextCalName(existingItems);
     Path calDir = projectPath.resolve(name);
     if (Files.exists(calDir)) {
@@ -43,9 +68,138 @@ public final class ProjectWriter {
     }
     Files.createDirectory(calDir);
     writeCalProperty(calDir, AFFrCalProperty.DEFAULT);
-    writeCalModel(calDir, AFFrCalculationModel.DEFAULT);
+    writeCalModel(calDir, model);
+    return new AFFrCalculation(name, calDir, project, AFFrCalProperty.DEFAULT, model);
+  }
+
+  // ── Rename ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Renames {@code cal}'s directory to {@code newName} inside {@code projectPath}.
+   *
+   * <p>Validation: {@code newName} must be non-blank and must not collide (case-insensitively) with
+   * any existing item name in {@code existingItems}.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param cal the calculation to rename
+   * @param newName the new directory name
+   * @param existingItems all current items in the project (including {@code cal})
+   * @return a new {@link AFFrCalculation} reflecting the new name and path
+   * @throws IOException if the name is blank, collides with an existing item, or the directory
+   *     cannot be renamed
+   */
+  public static AFFrCalculation renameCalculation(
+      Path projectPath,
+      AFFrCalculation cal,
+      String newName,
+      List<? extends ProjectItem> existingItems)
+      throws IOException {
+    if (newName.isBlank()) {
+      throw new IOException("Calculation name must not be blank.");
+    }
+    String trimmed = newName.trim();
+    for (ProjectItem item : existingItems) {
+      if (!item.name().equals(cal.name()) && item.name().equalsIgnoreCase(trimmed)) {
+        throw new IOException("A calculation named '" + trimmed + "' already exists.");
+      }
+    }
+    Path oldDir = cal.path();
+    Path newDir = projectPath.resolve(trimmed);
+    Files.move(oldDir, newDir);
     return new AFFrCalculation(
-        name, calDir, project, AFFrCalProperty.DEFAULT, AFFrCalculationModel.DEFAULT);
+        trimmed, newDir, cal.getProject(), cal.getProperty(), cal.getModel());
+  }
+
+  // ── Copy ───────────────────────────────────────────────────────────────────
+
+  /**
+   * Copies the entire calculation directory to a new sequential name ({@code cal_01}, {@code
+   * cal_02}, …) inside {@code projectPath}.
+   *
+   * <p>All files and sub-directories are copied recursively.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param cal the source calculation
+   * @param existingItems current items in the project; used to determine the next name
+   * @param project the owning project for the new calculation's back-reference
+   * @return the newly created {@link AFFrCalculation}
+   * @throws IOException if the directory cannot be copied
+   */
+  public static AFFrCalculation copyCalculation(
+      Path projectPath,
+      AFFrCalculation cal,
+      List<? extends ProjectItem> existingItems,
+      AFFrProject project)
+      throws IOException {
+    String name = nextCalName(existingItems);
+    Path destDir = projectPath.resolve(name);
+    if (Files.exists(destDir)) {
+      throw new IOException("'" + name + "' already exists in this project");
+    }
+    Path srcDir = cal.path();
+    Files.walkFileTree(
+        srcDir,
+        new SimpleFileVisitor<>() {
+          @Override
+          public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+              throws IOException {
+            Files.createDirectories(destDir.resolve(srcDir.relativize(dir)));
+            return FileVisitResult.CONTINUE;
+          }
+
+          @Override
+          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+              throws IOException {
+            Files.copy(
+                file,
+                destDir.resolve(srcDir.relativize(file)),
+                StandardCopyOption.REPLACE_EXISTING);
+            return FileVisitResult.CONTINUE;
+          }
+        });
+    AFFrCalProperty copiedProperty =
+        new AFFrCalProperty(
+            CalculationStatus.SETTING,
+            cal.getProperty().date(),
+            cal.getProperty().timeStep(),
+            cal.getProperty().host(),
+            cal.getProperty().jobId(),
+            cal.getProperty().queueName(),
+            cal.getProperty().ncpu(),
+            cal.getProperty().userSubrtUsed(),
+            cal.getProperty().execFiles(),
+            cal.getProperty().usrsubCheck());
+    writeCalProperty(destDir, copiedProperty);
+    return new AFFrCalculation(name, destDir, project, copiedProperty, cal.getModel());
+  }
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Deletes the calculation directory and all of its contents recursively.
+   *
+   * @param cal the calculation to delete
+   * @throws IOException if any file or directory cannot be deleted
+   */
+  public static void deleteCalculation(AFFrCalculation cal) throws IOException {
+    Path dir = cal.path();
+    Files.walkFileTree(
+        dir,
+        new SimpleFileVisitor<>() {
+          @Override
+          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+              throws IOException {
+            Files.delete(file);
+            return FileVisitResult.CONTINUE;
+          }
+
+          @Override
+          public FileVisitResult postVisitDirectory(Path d, IOException exc) throws IOException {
+            if (exc != null) throw exc;
+            Files.delete(d);
+            return FileVisitResult.CONTINUE;
+          }
+        });
   }
 
   // ── Name generation ────────────────────────────────────────────────────────
