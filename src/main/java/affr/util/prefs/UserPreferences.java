@@ -83,9 +83,9 @@ public final class UserPreferences {
 
   /**
    * Loads preferences from the given {@code prefsFile}. Returns defaults if the file is absent or
-   * unreadable. Package-private to allow tests to supply a temporary file.
+   * unreadable. Exposed for tests that need to supply a temporary file.
    */
-  static UserPreferences loadFrom(Path prefsFile) {
+  public static UserPreferences loadFrom(Path prefsFile) {
     Properties props = new Properties();
     if (Files.exists(prefsFile)) {
       try (InputStream in = Files.newInputStream(prefsFile)) {
