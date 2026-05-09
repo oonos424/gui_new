@@ -42,5 +42,11 @@ jobs:
       - name: Java compile
         run: ./gradlew --no-daemon compileJava
 
+      - name: Spotless check
+        run: ./gradlew --no-daemon spotlessCheck
+
+      - name: Checker nullness check
+        run: ./gradlew --no-daemon nullCheck
+
       - name: Tests
         run: ./gradlew --no-daemon test
