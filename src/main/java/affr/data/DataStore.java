@@ -61,7 +61,34 @@ public final class DataStore {
         .toList();
   }
 
-  // ── Private helpers ────────────────────────────────────────────────────────
+  /**
+   * Creates a new AFFr project inside {@code parentDir}.
+   *
+   * <p>Creates {@code parentDir/name/} and writes the {@code .affr_project} marker file with {@code
+   * memo} as its content. The directory must not already exist.
+   *
+   * @param parentDir the directory in which to create the project; must already exist
+   * @param name directory name; must not be blank or contain path separators
+   * @param memo optional free-text memo written verbatim to {@code .affr_project}
+   * @return the newly created {@link ProjectEntry}
+   * @throws IOException if the directory already exists or any other filesystem error occurs
+   * @throws IllegalArgumentException if {@code name} is blank or contains a path separator
+   */
+  public ProjectEntry createProject(Path parentDir, String name, String memo) throws IOException {
+    if (name.isBlank()) {
+      throw new IllegalArgumentException("Project name must not be blank");
+    }
+    if (name.contains("/") || name.contains("\\")) {
+      throw new IllegalArgumentException("Project name must not contain path separators");
+    }
+    Path projectDir = parentDir.resolve(name);
+    if (Files.exists(projectDir)) {
+      throw new IOException("'" + name + "' already exists in this directory");
+    }
+    Files.createDirectory(projectDir);
+    Files.writeString(projectDir.resolve(PROJECT_MARKER), memo);
+    return new ProjectEntry(projectDir, name, memo.strip());
+  }
 
   private BrowserEntry toBrowserEntry(Path path) {
     Path fn = path.getFileName();

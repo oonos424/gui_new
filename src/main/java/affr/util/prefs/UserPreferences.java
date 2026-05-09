@@ -31,6 +31,8 @@ public final class UserPreferences {
   private static final String KEY_WINDOW_HEIGHT = "window.height";
   private static final String KEY_WINDOW_X = "window.x";
   private static final String KEY_WINDOW_Y = "window.y";
+  private static final String KEY_BROWSER_VIEW_MODE = "browser.viewMode";
+  private static final String KEY_BROWSER_PATH = "browser.path";
 
   private static final Locale DEFAULT_LOCALE = Locale.ENGLISH;
   public static final double DEFAULT_WINDOW_WIDTH = 1200;
@@ -46,19 +48,29 @@ public final class UserPreferences {
 
   private double windowY;
 
+  /** {@code null} means use the default view mode (LIST). */
+  private @Nullable String browserViewMode;
+
+  /** {@code null} means start at the workspace root. */
+  private @Nullable String browserPath;
+
   private UserPreferences(
       Path prefsFile,
       Locale locale,
       double windowWidth,
       double windowHeight,
       double windowX,
-      double windowY) {
+      double windowY,
+      @Nullable String browserViewMode,
+      @Nullable String browserPath) {
     this.prefsFile = prefsFile;
     this.locale = locale;
     this.windowWidth = windowWidth;
     this.windowHeight = windowHeight;
     this.windowX = windowX;
     this.windowY = windowY;
+    this.browserViewMode = browserViewMode;
+    this.browserPath = browserPath;
   }
 
   /**
@@ -71,9 +83,9 @@ public final class UserPreferences {
 
   /**
    * Loads preferences from the given {@code prefsFile}. Returns defaults if the file is absent or
-   * unreadable. Package-private to allow tests to supply a temporary file.
+   * unreadable. Exposed for tests that need to supply a temporary file.
    */
-  static UserPreferences loadFrom(Path prefsFile) {
+  public static UserPreferences loadFrom(Path prefsFile) {
     Properties props = new Properties();
     if (Files.exists(prefsFile)) {
       try (InputStream in = Files.newInputStream(prefsFile)) {
@@ -87,7 +99,9 @@ public final class UserPreferences {
         parsePositiveDouble(props.getProperty(KEY_WINDOW_WIDTH), DEFAULT_WINDOW_WIDTH),
         parsePositiveDouble(props.getProperty(KEY_WINDOW_HEIGHT), DEFAULT_WINDOW_HEIGHT),
         parseFiniteDouble(props.getProperty(KEY_WINDOW_X)),
-        parseFiniteDouble(props.getProperty(KEY_WINDOW_Y)));
+        parseFiniteDouble(props.getProperty(KEY_WINDOW_Y)),
+        props.getProperty(KEY_BROWSER_VIEW_MODE),
+        props.getProperty(KEY_BROWSER_PATH));
   }
 
   /** Returns the saved UI locale. */
@@ -141,6 +155,32 @@ public final class UserPreferences {
     this.windowY = y;
   }
 
+  /**
+   * Returns the saved file-browser view mode name (e.g. {@code "LIST"}, {@code "ICON"}, {@code
+   * "TREE"}), or {@code null} if none has been saved yet.
+   */
+  public @Nullable String browserViewMode() {
+    return browserViewMode;
+  }
+
+  /** Updates the in-memory browser view mode name. Call {@link #save()} to persist the change. */
+  public void setBrowserViewMode(@Nullable String mode) {
+    this.browserViewMode = mode;
+  }
+
+  /**
+   * Returns the saved file-browser directory path as an absolute string, or {@code null} if none
+   * has been saved yet (the browser will start at the workspace root).
+   */
+  public @Nullable String browserPath() {
+    return browserPath;
+  }
+
+  /** Updates the in-memory browser path. Call {@link #save()} to persist the change. */
+  public void setBrowserPath(@Nullable String path) {
+    this.browserPath = path;
+  }
+
   /** Writes current preferences to the file this instance was loaded from. */
   public void save() {
     try {
@@ -154,6 +194,8 @@ public final class UserPreferences {
       props.setProperty(KEY_WINDOW_HEIGHT, String.valueOf(windowHeight));
       if (Double.isFinite(windowX)) props.setProperty(KEY_WINDOW_X, String.valueOf(windowX));
       if (Double.isFinite(windowY)) props.setProperty(KEY_WINDOW_Y, String.valueOf(windowY));
+      if (browserViewMode != null) props.setProperty(KEY_BROWSER_VIEW_MODE, browserViewMode);
+      if (browserPath != null) props.setProperty(KEY_BROWSER_PATH, browserPath);
       try (OutputStream out = Files.newOutputStream(prefsFile)) {
         props.store(out, "AFFr user preferences — do not edit while the app is running");
       }
