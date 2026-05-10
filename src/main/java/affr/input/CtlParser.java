@@ -46,7 +46,7 @@ public final class CtlParser {
   private static final Pattern LOGICAL_FALSE =
       Pattern.compile("^\\.false\\.|^f$", Pattern.CASE_INSENSITIVE);
   private static final Pattern REAL_PATTERN =
-      Pattern.compile("[+-]?(?:\\d+\\.\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?|[+-]?\\d+[eE][+-]?\\d+");
+      Pattern.compile("[+-]?(?:\\d+\\.\\d*|\\.\\d+)(?:[dDeE][+-]?\\d+)?|[+-]?\\d+[dDeE][+-]?\\d+");
   private static final Pattern INTEGER_PATTERN = Pattern.compile("[+-]?\\d+");
 
   private CtlParser() {}

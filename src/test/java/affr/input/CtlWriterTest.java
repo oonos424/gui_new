@@ -2,13 +2,18 @@ package affr.input;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import affr.project.AFFrCalculationModel;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,9 +43,7 @@ final class CtlWriterTest {
   @Test
   void formatReal() {
     String formatted = CtlWriter.formatValue(new AFFrReal("dt", 1.5e-3));
-    // Should contain 'E' notation (Java Double.toString style, uppercased)
-    assertTrue(
-        formatted.contains("E") || formatted.contains("."), "Expected decimal or E-notation");
+    assertEquals(1.5e-3, Double.parseDouble(formatted.replace('E', 'e')), 1e-20);
   }
 
   @Test
@@ -200,6 +203,64 @@ final class CtlWriterTest {
     assertNotNull(rb.getData("inlet"));
     assertNotNull(rb.getData("wall"));
     assertEquals(0.5, rb.getValue("inlet", "area").getRealValue(), 1e-15);
+  }
+
+  // ── Reload integration ────────────────────────────────────────────────────
+
+  @Test
+  void reloadClearsOldSingleValues(@TempDir Path tmp) throws IOException {
+    input.getSingle(NamelistNames.MODEL).setValue("ncpu", new AFFrInteger("ncpu", 4));
+    Path ctlFile = tmp.resolve("fflow.ctl");
+    // Write a file that has ncpu = 16, not 4
+    Files.writeString(ctlFile, "&MODEL\n  ncpu = 16\n/\n");
+
+    input.reload(ctlFile);
+
+    AFFrValue v = input.getSingle(NamelistNames.MODEL).getValue("ncpu");
+    assertNotNull(v);
+    assertEquals(16, v.getIntegerValue());
+  }
+
+  @Test
+  void reloadClearsOldMultiInstances(@TempDir Path tmp) throws IOException {
+    AFFrNamelistMulti boundary = input.getMulti(NamelistNames.BOUNDARY);
+    assertNotNull(boundary);
+    boundary.addInstance("old_inlet");
+    boundary.setValue(
+        "old_inlet", "boundary_name", new AFFrCharacter("boundary_name", "old_inlet"));
+    Path ctlFile = tmp.resolve("fflow.ctl");
+    Files.writeString(
+        ctlFile, "&BOUNDARY\n  boundary_name = 'new_inlet', boundary_type = 'inlet'\n/\n");
+
+    input.reload(ctlFile);
+
+    assertNull(boundary.getData("old_inlet"));
+    assertNotNull(boundary.getData("new_inlet"));
+  }
+
+  @Test
+  void reloadPopulatesNewValues(@TempDir Path tmp) throws IOException {
+    Path ctlFile = tmp.resolve("fflow.ctl");
+    Files.writeString(ctlFile, "&DELTAT\n  dt = 5.0E-4\n/\n");
+
+    input.reload(ctlFile);
+
+    AFFrValue v = input.getSingle(NamelistNames.DELTAT).getValue("dt");
+    assertNotNull(v);
+    assertInstanceOf(AFFrReal.class, v);
+    assertEquals(5.0e-4, v.getRealValue(), 1e-20);
+  }
+
+  @Test
+  void reloadFiresValueListeners(@TempDir Path tmp) throws IOException {
+    List<@Nullable AFFrValue> received = new ArrayList<>();
+    input.getSingle(NamelistNames.MODEL).addValueListener("ncpu", (key, val) -> received.add(val));
+    Path ctlFile = tmp.resolve("fflow.ctl");
+    Files.writeString(ctlFile, "&MODEL\n  ncpu = 2\n/\n");
+
+    input.reload(ctlFile);
+
+    assertFalse(received.isEmpty());
   }
 
   // ── Snapshot / unsaved-change detection ───────────────────────────────────

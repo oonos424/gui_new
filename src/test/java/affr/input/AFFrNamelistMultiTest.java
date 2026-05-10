@@ -193,6 +193,42 @@ final class AFFrNamelistMultiTest {
     assertEquals("boundary_01", namelist.nextInstanceKey());
   }
 
+  // ── clearInstances ─────────────────────────────────────────────────────────
+
+  @Test
+  void clearInstancesRemovesAllInstances() {
+    namelist.addInstance("inlet");
+    namelist.addInstance("outlet");
+
+    namelist.clearInstances();
+
+    assertNull(namelist.getData("inlet"));
+    assertNull(namelist.getData("outlet"));
+    assertTrue(namelist.getInstanceKeyList().isEmpty());
+  }
+
+  @Test
+  void clearInstancesFiresStructureListenerPerInstance() {
+    List<AFFrNamelist> fired = new ArrayList<>();
+    namelist.addInstance("inlet");
+    namelist.addInstance("outlet");
+    namelist.addNamelistListener(fired::add);
+
+    namelist.clearInstances();
+
+    assertEquals(2, fired.size());
+  }
+
+  @Test
+  void clearInstancesOnEmptyNamelistIsNoOp() {
+    List<AFFrNamelist> fired = new ArrayList<>();
+    namelist.addNamelistListener(fired::add);
+
+    namelist.clearInstances();
+
+    assertEquals(0, fired.size());
+  }
+
   // ── Metadata ───────────────────────────────────────────────────────────────
 
   @Test

@@ -6,8 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import affr.project.AFFrCalculationModel;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Unit tests for {@link CtlParser}. */
 final class CtlParserTest {
@@ -216,6 +220,42 @@ final class CtlParserTest {
     AFFrValue v = CtlParser.inferType("s", "someword");
     assertInstanceOf(AFFrCharacter.class, v);
     assertEquals("someword", v.getCharacterValue());
+  }
+
+  @Test
+  void inferTypeFortranDExponent() {
+    AFFrValue v = CtlParser.inferType("x", "1.0D-3");
+    assertInstanceOf(AFFrReal.class, v);
+    assertEquals(1.0e-3, v.getRealValue(), 1e-20);
+  }
+
+  @Test
+  void inferTypeNegativeReal() {
+    AFFrValue v = CtlParser.inferType("x", "-3.14");
+    assertInstanceOf(AFFrReal.class, v);
+    assertEquals(-3.14, v.getRealValue(), 1e-10);
+  }
+
+  @Test
+  void inferTypeIntegerOverflow() {
+    AFFrValue v = CtlParser.inferType("n", "2147483648");
+    assertInstanceOf(AFFrCharacter.class, v);
+    assertEquals("2147483648", v.getCharacterValue());
+  }
+
+  // ── Integration: loadFromFile ──────────────────────────────────────────────
+
+  @Test
+  void loadFromFilePopulatesValues(@TempDir Path tmp) throws IOException {
+    Path ctlFile = tmp.resolve("fflow.ctl");
+    Files.writeString(ctlFile, "&MODEL\n  ncpu = 8\n/\n");
+
+    AFFrInput loaded = AFFrInput.loadFromFile(ctlFile, AFFrCalculationModel.DEFAULT);
+
+    AFFrValue v = loaded.getSingle(NamelistNames.MODEL).getValue("ncpu");
+    assertNotNull(v);
+    assertInstanceOf(AFFrInteger.class, v);
+    assertEquals(8, v.getIntegerValue());
   }
 
   // ── Multiple namelists in one file ─────────────────────────────────────────
