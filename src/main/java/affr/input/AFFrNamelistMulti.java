@@ -26,23 +26,23 @@ public final class AFFrNamelistMulti extends AFFrNamelist {
    */
   public static final Map<String, String> KEY_VARIABLE =
       Map.ofEntries(
-          Map.entry("BOUNDARY", "boundary_name"),
-          Map.entry("INITIAL", "imat_u"),
-          Map.entry("FLUID", "imat_u"),
-          Map.entry("SOLID", "imat_u"),
-          Map.entry("OUTPUT", "file"),
-          Map.entry("MASS", "boundary_name"),
-          Map.entry("ENERGY", "boundary_name"),
-          Map.entry("PROBES", "label"),
-          Map.entry("FORCE_FLUIDS", "label"),
-          Map.entry("CDCL_OUTPUT", "label"),
-          Map.entry("SPECIES", "name"),
-          Map.entry("CHEMREAC", "name"),
-          Map.entry("VOF_INIT", "imat_u"),
-          Map.entry("CAVI_INIT", "imat_u"),
-          Map.entry("SURFACE_SPECIES", "name"),
-          Map.entry("SOUND_SOURCE", "label"),
-          Map.entry("SOUND_OBSERVER", "label"));
+          Map.entry(NamelistNames.BOUNDARY, "boundary_name"),
+          Map.entry(NamelistNames.INITIAL, "imat_u"),
+          Map.entry(NamelistNames.FLUID, "imat_u"),
+          Map.entry(NamelistNames.SOLID, "imat_u"),
+          Map.entry(NamelistNames.OUTPUT, "file"),
+          Map.entry(NamelistNames.MASS, "boundary_name"),
+          Map.entry(NamelistNames.ENERGY, "boundary_name"),
+          Map.entry(NamelistNames.PROBES, "label"),
+          Map.entry(NamelistNames.FORCE_FLUIDS, "label"),
+          Map.entry(NamelistNames.CDCL_OUTPUT, "label"),
+          Map.entry(NamelistNames.SPECIES, "name"),
+          Map.entry(NamelistNames.CHEMREAC, "name"),
+          Map.entry(NamelistNames.VOF_INIT, "imat_u"),
+          Map.entry(NamelistNames.CAVI_INIT, "imat_u"),
+          Map.entry(NamelistNames.SURFACE_SPECIES, "name"),
+          Map.entry(NamelistNames.SOUND_SOURCE, "label"),
+          Map.entry(NamelistNames.SOUND_OBSERVER, "label"));
 
   /**
    * Maps each multi-instance namelist name (upper-case) to the prefix used when auto-generating new
@@ -50,23 +50,23 @@ public final class AFFrNamelistMulti extends AFFrNamelist {
    */
   public static final Map<String, String> INSTANCE_PREFIX =
       Map.ofEntries(
-          Map.entry("BOUNDARY", "boundary_"),
-          Map.entry("INITIAL", "region_"),
-          Map.entry("FLUID", "fluid_"),
-          Map.entry("SOLID", "solid_"),
-          Map.entry("OUTPUT", "output_"),
-          Map.entry("MASS", "mass_"),
-          Map.entry("ENERGY", "energy_"),
-          Map.entry("PROBES", "probe_"),
-          Map.entry("FORCE_FLUIDS", "force_"),
-          Map.entry("CDCL_OUTPUT", "cdcl_"),
-          Map.entry("SPECIES", "species_"),
-          Map.entry("CHEMREAC", "reac_"),
-          Map.entry("VOF_INIT", "vofinit_"),
-          Map.entry("CAVI_INIT", "caviinit_"),
-          Map.entry("SURFACE_SPECIES", "surf_"),
-          Map.entry("SOUND_SOURCE", "source_"),
-          Map.entry("SOUND_OBSERVER", "observer_"));
+          Map.entry(NamelistNames.BOUNDARY, "boundary_"),
+          Map.entry(NamelistNames.INITIAL, "region_"),
+          Map.entry(NamelistNames.FLUID, "fluid_"),
+          Map.entry(NamelistNames.SOLID, "solid_"),
+          Map.entry(NamelistNames.OUTPUT, "output_"),
+          Map.entry(NamelistNames.MASS, "mass_"),
+          Map.entry(NamelistNames.ENERGY, "energy_"),
+          Map.entry(NamelistNames.PROBES, "probe_"),
+          Map.entry(NamelistNames.FORCE_FLUIDS, "force_"),
+          Map.entry(NamelistNames.CDCL_OUTPUT, "cdcl_"),
+          Map.entry(NamelistNames.SPECIES, "species_"),
+          Map.entry(NamelistNames.CHEMREAC, "reac_"),
+          Map.entry(NamelistNames.VOF_INIT, "vofinit_"),
+          Map.entry(NamelistNames.CAVI_INIT, "caviinit_"),
+          Map.entry(NamelistNames.SURFACE_SPECIES, "surf_"),
+          Map.entry(NamelistNames.SOUND_SOURCE, "source_"),
+          Map.entry(NamelistNames.SOUND_OBSERVER, "observer_"));
 
   /**
    * The field name of the variable that identifies each instance (e.g. {@code "boundary_name"}).
