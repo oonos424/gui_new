@@ -1,6 +1,9 @@
 package affr.project;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -36,12 +39,23 @@ public final class CtlReader {
   /**
    * Reads {@code ctlFile} and returns the {@link AFFrCalculationModel} it represents.
    *
+   * <p>The file is read as UTF-8. If that fails with a {@link MalformedInputException} — for
+   * example when the Fortran solver wrote the file using the OS locale encoding such as MS932 on
+   * Japanese Windows — reading is retried with {@link Charset#defaultCharset()}. All keywords and
+   * values currently parsed are ASCII, so either charset produces correct results as long as the
+   * file is otherwise well-formed.
+   *
    * @param ctlFile path to the {@code fflow.ctl} file
    * @return the parsed model
    * @throws IOException if the file cannot be read or is not a recognisable namelist file
    */
   public static AFFrCalculationModel read(Path ctlFile) throws IOException {
-    String content = Files.readString(ctlFile);
+    String content;
+    try {
+      content = Files.readString(ctlFile, StandardCharsets.UTF_8);
+    } catch (MalformedInputException e) {
+      content = Files.readString(ctlFile, Charset.defaultCharset());
+    }
     String lower = content.toLowerCase(Locale.ROOT);
 
     Map<String, String> modelVars = parseNamelist(content, lower, "model");
