@@ -61,15 +61,52 @@ public final class ProjectWriter {
       AFFrProject project,
       AFFrCalculationModel model)
       throws IOException {
-    String name = nextCalName(existingItems);
-    Path calDir = projectPath.resolve(name);
+    return createCalculation(
+        projectPath, existingItems, project, model, nextCalName(existingItems));
+  }
+
+  /**
+   * Creates a new calculation with the supplied {@code name} (rather than the next sequential
+   * default).
+   *
+   * <p>Validation matches {@link #renameCalculation}: {@code name} must be non-blank after
+   * trimming, and must not collide (case-insensitively) with any existing item in {@code
+   * existingItems}. The trimmed name is used both as the on-disk directory name and as the
+   * calculation's display name.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param existingItems the current items in the project; used for collision checking
+   * @param project the owning project (set as the back-reference on the new calculation)
+   * @param model the physics model selection chosen by the user
+   * @param name the requested calculation name
+   * @return the newly created {@link AFFrCalculation}
+   * @throws IOException if {@code name} is blank, collides with an existing item, or the directory
+   *     or any file cannot be created
+   */
+  public static AFFrCalculation createCalculation(
+      Path projectPath,
+      List<? extends ProjectItem> existingItems,
+      AFFrProject project,
+      AFFrCalculationModel model,
+      String name)
+      throws IOException {
+    if (name.isBlank()) {
+      throw new IOException("Calculation name must not be blank.");
+    }
+    String trimmed = name.trim();
+    for (ProjectItem item : existingItems) {
+      if (item.name().equalsIgnoreCase(trimmed)) {
+        throw new IOException("A calculation named '" + trimmed + "' already exists.");
+      }
+    }
+    Path calDir = projectPath.resolve(trimmed);
     if (Files.exists(calDir)) {
-      throw new IOException("'" + name + "' already exists in this project");
+      throw new IOException("'" + trimmed + "' already exists in this project");
     }
     Files.createDirectory(calDir);
     writeCalProperty(calDir, AFFrCalProperty.DEFAULT);
     writeCalModel(calDir, model);
-    return new AFFrCalculation(name, calDir, project, AFFrCalProperty.DEFAULT, model);
+    return new AFFrCalculation(trimmed, calDir, project, AFFrCalProperty.DEFAULT, model);
   }
 
   // ── Rename ─────────────────────────────────────────────────────────────────
@@ -193,7 +230,11 @@ public final class ProjectWriter {
 
   // ── Name generation ────────────────────────────────────────────────────────
 
-  static String nextCalName(List<? extends ProjectItem> items) {
+  /**
+   * Returns the next sequential calculation name ({@code cal_01}, {@code cal_02}, …) given the
+   * already-existing project items. Items whose names do not match {@code cal_NN} are ignored.
+   */
+  public static String nextCalName(List<? extends ProjectItem> items) {
     int max =
         items.stream()
             .map(ProjectItem::name)
