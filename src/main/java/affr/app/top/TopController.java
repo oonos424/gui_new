@@ -66,6 +66,8 @@ public final class TopController {
   private @Nullable TopViewModel viewModel;
   private @Nullable FileBrowserViewModel fileBrowserViewModel;
   private @Nullable Node fileBrowserNode;
+  private @Nullable FileBrowserViewModel tutorialBrowserViewModel;
+  private @Nullable Node tutorialBrowserNode;
 
   // -------------------------------------------------------------------------
   // FXML lifecycle — rendering rules only, no data
@@ -111,15 +113,25 @@ public final class TopController {
    *
    * @param viewModel the ViewModel for this shell
    * @param fileBrowserViewModel the ViewModel of the FILE-category sub-view; bound to the header
-   *     navigation controls
+   *     navigation controls when FILE is active
    * @param fileBrowserNode the root node of the FILE-category sub-view; placed into the viewer pane
    *     when the FILE category is active
+   * @param tutorialBrowserViewModel the ViewModel of the TUTORIALS-category sub-view, or {@code
+   *     null} if no tutorial inventory is available
+   * @param tutorialBrowserNode the root node of the TUTORIALS-category sub-view, or {@code null} if
+   *     no tutorial inventory is available
    */
   public void init(
-      TopViewModel viewModel, FileBrowserViewModel fileBrowserViewModel, Node fileBrowserNode) {
+      TopViewModel viewModel,
+      FileBrowserViewModel fileBrowserViewModel,
+      Node fileBrowserNode,
+      @Nullable FileBrowserViewModel tutorialBrowserViewModel,
+      @Nullable Node tutorialBrowserNode) {
     this.viewModel = viewModel;
     this.fileBrowserViewModel = fileBrowserViewModel;
     this.fileBrowserNode = fileBrowserNode;
+    this.tutorialBrowserViewModel = tutorialBrowserViewModel;
+    this.tutorialBrowserNode = tutorialBrowserNode;
 
     ListView<TopCategory> list = requireCategoryList();
     list.setItems(viewModel.getCategories());
@@ -145,9 +157,6 @@ public final class TopController {
 
     list.getSelectionModel().select(viewModel.getSelectedCategory());
     renderViewer(viewModel.getSelectedCategory());
-
-    // ── Header navigation (binds directly to file-browser VM, no controller hop) ─
-    wireHeaderNav(fileBrowserViewModel);
 
     // ── Language menu ────────────────────────────────────────────────
     syncLanguageMenu(I18n.getLocale());
@@ -215,6 +224,11 @@ public final class TopController {
       fbVm.setOpeningProject(null);
       fbVm.clearOpenedProject();
     }
+    FileBrowserViewModel tutVm = tutorialBrowserViewModel;
+    if (tutVm != null) {
+      tutVm.setOpeningProject(null);
+      tutVm.clearOpenedProject();
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -224,17 +238,34 @@ public final class TopController {
   /**
    * Renders the viewer pane and updates the header navigation area for the given category.
    *
-   * <p>FILE: shows the file-browser node and the header nav controls (Up + breadcrumb). RUNNING /
-   * TUTORIALS: shows a placeholder label and hides the header nav.
+   * <p>FILE: shows the file-browser node and the header nav (Up + breadcrumb), binding nav to the
+   * file-browser VM. TUTORIALS: shows the tutorial-browser node and header nav if the tutorial
+   * inventory is available; otherwise shows a "not configured" placeholder. RUNNING: shows a
+   * placeholder and hides the header nav.
    */
   private void renderViewer(TopCategory category) {
     StackPane pane = requireViewerPane();
     switch (category) {
       case FILE -> {
         requireHeaderNav().setVisible(true);
+        wireHeaderNav(requireFileBrowserViewModel(), "~/.affr");
         pane.getChildren().setAll(requireFileBrowserNode());
       }
-      case RUNNING, TUTORIALS -> {
+      case TUTORIALS -> {
+        Node tutNode = tutorialBrowserNode;
+        FileBrowserViewModel tutVm = tutorialBrowserViewModel;
+        if (tutNode != null && tutVm != null) {
+          requireHeaderNav().setVisible(true);
+          wireHeaderNav(tutVm, "tutorials");
+          pane.getChildren().setAll(tutNode);
+        } else {
+          requireHeaderNav().setVisible(false);
+          Label placeholder = new Label(I18n.get("tutorials.notConfigured"));
+          placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #888;");
+          pane.getChildren().setAll(placeholder);
+        }
+      }
+      case RUNNING -> {
         requireHeaderNav().setVisible(false);
         Label placeholder = new Label(I18n.get(category.messageKey()));
         placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #888;");
@@ -244,22 +275,24 @@ public final class TopController {
   }
 
   /**
-   * Binds the header navigation widgets to the {@link FileBrowserViewModel}. The Up button calls
-   * {@link FileBrowserViewModel#navigateUp()} directly — no controller-to-controller hop.
+   * Binds the header navigation widgets to the given {@link FileBrowserViewModel}. Safe to call
+   * multiple times: each call rebinds to the new VM (previous bindings are replaced). Called from
+   * {@link #renderViewer} when switching to a browser-surface category.
    *
    * <ul>
-   *   <li>Path label tracks {@code currentPathProperty()} formatted relative to the workspace root.
+   *   <li>Path label tracks {@code currentPathProperty()} formatted relative to the workspace root,
+   *       using {@code rootLabel} as the display name for the root.
    *   <li>Up button is disabled when the browser is at the workspace root.
    * </ul>
    */
-  private void wireHeaderNav(FileBrowserViewModel vm) {
+  private void wireHeaderNav(FileBrowserViewModel vm, String rootLabel) {
     Path rootPath = vm.getRootPath();
 
     requireHeaderNavPathLabel()
         .textProperty()
         .bind(
             Bindings.createStringBinding(
-                () -> PathFormatting.breadcrumb(vm.getCurrentPath(), rootPath),
+                () -> PathFormatting.breadcrumb(vm.getCurrentPath(), rootPath, rootLabel),
                 vm.currentPathProperty()));
 
     requireHeaderNavUpButton().setOnAction(e -> vm.navigateUp());
@@ -364,5 +397,11 @@ public final class TopController {
     Node node = fileBrowserNode;
     if (node == null) throw new IllegalStateException("init() has not been called");
     return node;
+  }
+
+  private FileBrowserViewModel requireFileBrowserViewModel() {
+    FileBrowserViewModel vm = fileBrowserViewModel;
+    if (vm == null) throw new IllegalStateException("init() has not been called");
+    return vm;
   }
 }

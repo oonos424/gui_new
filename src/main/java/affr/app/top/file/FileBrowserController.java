@@ -268,6 +268,11 @@ public final class FileBrowserController {
             (obs, old, bundle) ->
                 requireNewProjectButton().setText(I18n.get("browser.newProjectButton")));
 
+    // ── Hide new-project button when root is read-only (e.g. Tutorials) ───
+    Button newProjBtn = requireNewProjectButton();
+    newProjBtn.visibleProperty().bind(viewModel.readOnlyRootProperty().not());
+    newProjBtn.managedProperty().bind(viewModel.readOnlyRootProperty().not());
+
     viewModel.navigateTo(viewModel.getCurrentPath());
   }
 

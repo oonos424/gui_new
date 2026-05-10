@@ -14,21 +14,34 @@ public final class PathFormatting {
   private PathFormatting() {}
 
   /**
-   * Formats a workspace-relative path as {@code ~/.affr} or {@code ~/.affr/relative/sub/path}.
+   * Formats a workspace-relative path as {@code rootLabel} or {@code rootLabel/relative/sub/path}.
    *
-   * <p>Both arguments must come from the same default filesystem. The output always uses {@code
-   * '/'} as a separator, even on Windows where {@link Path#toString()} would otherwise return
-   * backslashes.
+   * <p>Both path arguments must come from the same default filesystem. The output always uses
+   * {@code '/'} as a separator, even on Windows where {@link Path#toString()} would otherwise
+   * return backslashes.
+   *
+   * @param current the path currently displayed
+   * @param root the root of the browseable tree (browser cannot navigate above this)
+   * @param rootLabel the human-readable label for {@code root} (e.g. {@code "~/.affr"} for the user
+   *     workspace, {@code "tutorials"} for the tutorial inventory root)
    */
-  public static String breadcrumb(Path current, Path root) {
+  public static String breadcrumb(Path current, Path root, String rootLabel) {
     if (current.equals(root)) {
-      return "~/.affr";
+      return rootLabel;
     }
     Path relative = root.relativize(current);
-    StringBuilder sb = new StringBuilder("~/.affr");
+    StringBuilder sb = new StringBuilder(rootLabel);
     for (Path segment : relative) {
       sb.append('/').append(segment);
     }
     return sb.toString();
+  }
+
+  /**
+   * Convenience overload that uses {@code "~/.affr"} as the root label. Suitable for the user
+   * workspace browser where the root is always the AFFr application directory.
+   */
+  public static String breadcrumb(Path current, Path root) {
+    return breadcrumb(current, root, "~/.affr");
   }
 }

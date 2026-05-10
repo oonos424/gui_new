@@ -72,6 +72,51 @@ public final class ProjectWriter {
     return new AFFrCalculation(name, calDir, project, AFFrCalProperty.DEFAULT, model);
   }
 
+  /**
+   * Creates a new calculation inside {@code projectPath} with a user-supplied name and the given
+   * model.
+   *
+   * <p>Used for tutorial projects, where the user provides the calculation name directly instead of
+   * having a sequential name auto-generated.
+   *
+   * <p>Validation: {@code calName} must be non-blank and must not collide (case-insensitively) with
+   * any existing item.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param calName the user-specified name for the new calculation directory
+   * @param existingItems the current items in the project; used for collision detection
+   * @param project the owning project (set as the back-reference on the new calculation)
+   * @param model the physics model to record in {@code .mode}
+   * @return the newly created {@link AFFrCalculation}
+   * @throws IOException if the name is blank, collides, or the directory or any file cannot be
+   *     created
+   */
+  public static AFFrCalculation createCalculation(
+      Path projectPath,
+      String calName,
+      List<? extends ProjectItem> existingItems,
+      AFFrProject project,
+      AFFrCalculationModel model)
+      throws IOException {
+    if (calName.isBlank()) {
+      throw new IOException("Calculation name must not be blank.");
+    }
+    String trimmed = calName.trim();
+    for (ProjectItem item : existingItems) {
+      if (item.name().equalsIgnoreCase(trimmed)) {
+        throw new IOException("A calculation named '" + trimmed + "' already exists.");
+      }
+    }
+    Path calDir = projectPath.resolve(trimmed);
+    if (Files.exists(calDir)) {
+      throw new IOException("'" + trimmed + "' already exists in this project");
+    }
+    Files.createDirectory(calDir);
+    writeCalProperty(calDir, AFFrCalProperty.DEFAULT);
+    writeCalModel(calDir, model);
+    return new AFFrCalculation(trimmed, calDir, project, AFFrCalProperty.DEFAULT, model);
+  }
+
   // ── Rename ─────────────────────────────────────────────────────────────────
 
   /**

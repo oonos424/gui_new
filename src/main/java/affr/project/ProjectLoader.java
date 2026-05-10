@@ -41,11 +41,48 @@ public final class ProjectLoader {
    * @throws IOException if the directory cannot be listed
    */
   public AFFrProject load(Path projectPath) throws IOException {
+    return load(projectPath, false, null);
+  }
+
+  /**
+   * Loads the project rooted at {@code projectPath}, optionally marking it as a tutorial project.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param tutorial {@code true} when loading from the tutorial inventory
+   * @return the loaded project; never {@code null}
+   * @throws IOException if the directory cannot be listed
+   */
+  public AFFrProject load(Path projectPath, boolean tutorial) throws IOException {
+    return load(projectPath, tutorial, null);
+  }
+
+  /**
+   * Loads the project rooted at {@code projectPath}, with an optional writable mirror directory.
+   *
+   * <p>When {@code mirrorPath} is non-null and exists, calculations are loaded from both {@code
+   * projectPath} and {@code mirrorPath} and merged into a single list. This supports tutorial
+   * projects whose reference files live under the (read-only) installation directory while
+   * user-created calculations are stored in the writable mirror.
+   *
+   * @param projectPath absolute path to the project directory
+   * @param tutorial {@code true} when loading from the tutorial inventory
+   * @param mirrorPath writable mirror directory for user-created calculations; may be {@code null}
+   * @return the loaded project; never {@code null}
+   * @throws IOException if either directory cannot be listed
+   */
+  public AFFrProject load(Path projectPath, boolean tutorial, @Nullable Path mirrorPath)
+      throws IOException {
     @Nullable Path fn = projectPath.getFileName();
     String name = fn != null ? fn.toString() : projectPath.toString();
     String memo = readMemo(projectPath);
-    List<AFFrCalculation> calculations = loadCalculations(projectPath);
-    AFFrProject project = new AFFrProject(name, projectPath, memo, calculations);
+
+    List<AFFrCalculation> calculations = new ArrayList<>(loadCalculations(projectPath));
+    if (mirrorPath != null && Files.isDirectory(mirrorPath)) {
+      calculations.addAll(loadCalculations(mirrorPath));
+    }
+
+    AFFrProject project =
+        new AFFrProject(name, projectPath, memo, calculations, tutorial, mirrorPath);
     for (AFFrCalculation cal : calculations) {
       cal.setProject(project);
     }

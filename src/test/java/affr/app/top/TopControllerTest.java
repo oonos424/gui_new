@@ -77,7 +77,7 @@ final class TopControllerTest {
 
     controller = loader.getController();
     viewModel = new TopViewModel();
-    controller.init(viewModel, fbVm, fbNode);
+    controller.init(viewModel, fbVm, fbNode, null, null);
 
     categoryList = (ListView<TopCategory>) root.lookup("#categoryList");
     viewerPane = (StackPane) root.lookup("#viewerPane");
@@ -116,7 +116,8 @@ final class TopControllerTest {
     WaitForAsyncUtils.waitForFxEvents();
 
     assertSame(TopCategory.TUTORIALS, categoryList.getSelectionModel().getSelectedItem());
-    assertEquals(TopCategory.TUTORIALS.label(), labelTextOf(viewerPane));
+    // No tutorial dir configured in tests → placeholder shows "not configured" message.
+    assertFalse(viewerPane.getChildren().isEmpty(), "viewerPane should contain a placeholder");
   }
 
   @Test
@@ -164,12 +165,16 @@ final class TopControllerTest {
   /**
    * Asserts that the viewer pane contains the correct content for {@code category}.
    *
-   * <p>FILE renders the file-browser sub-view (no placeholder label). RUNNING and TUTORIALS render
-   * a placeholder {@link Label} with the category's i18n label text.
+   * <p>FILE renders the file-browser sub-view (no placeholder label). RUNNING renders a placeholder
+   * {@link Label} with the category's i18n label text. TUTORIALS renders either the tutorial
+   * browser (if configured) or a "not configured" placeholder — in tests, no tutorial dir is
+   * provided, so we only assert the pane is non-empty.
    */
   private static void assertViewerRendered(TopCategory category, StackPane pane) {
     if (category == TopCategory.FILE) {
       assertFalse(pane.getChildren().isEmpty(), "viewerPane should contain the file browser");
+    } else if (category == TopCategory.TUTORIALS) {
+      assertFalse(pane.getChildren().isEmpty(), "viewerPane should contain a placeholder");
     } else {
       assertEquals(category.label(), labelTextOf(pane));
     }

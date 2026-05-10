@@ -13,6 +13,7 @@ import affr.util.i18n.I18n;
 import java.awt.Desktop;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -126,6 +127,18 @@ public final class ProjectController {
 
   @FXML
   private void onAddCalculation() {
+    if (requireViewModel().getProject().isTutorial()) {
+      onAddTutorialCalculation();
+    } else {
+      onAddRegularCalculation();
+    }
+  }
+
+  /**
+   * Add-calculation flow for regular (non-tutorial) projects: opens the full model-selection
+   * dialog, then creates the calculation with an auto-generated sequential name.
+   */
+  private void onAddRegularCalculation() {
     Optional<@Nullable AFFrCalculationModel> modelChoice = showNewCalculationDialog();
     if (modelChoice.isEmpty()) return;
     @Nullable AFFrCalculationModel chosenModel = modelChoice.get();
@@ -142,6 +155,62 @@ public final class ProjectController {
           @Override
           protected AFFrCalculation call() throws Exception {
             return ProjectWriter.createCalculation(projectPath, snapshot, project, model);
+          }
+        };
+
+    task.setOnSucceeded(
+        e -> {
+          @Nullable AFFrCalculation cal = task.getValue();
+          if (cal != null) {
+            vm.addItem(cal);
+            requireItemList().getSelectionModel().select(cal);
+          }
+        });
+
+    task.setOnFailed(e -> showError(task.getException()));
+
+    Thread.ofVirtual().name("affr-cal-creator").start(task);
+  }
+
+  /**
+   * Add-calculation flow for tutorial projects: asks only for a calculation name. The physics model
+   * defaults to {@link AFFrCalculationModel#DEFAULT} as a placeholder.
+   *
+   * <p>New calculations are written to the project's writable mirror directory ({@link
+   * AFFrProject#getMirrorPath()}) rather than to the read-only tutorial installation path.
+   *
+   * <p>TODO: pre-fill the model from the tutorial case's {@code fflow.ctl} reference file via
+   * {@code CtlReader} — blocked until the tutorial reference-CTL path convention is settled.
+   */
+  private void onAddTutorialCalculation() {
+    ProjectViewModel vm = requireViewModel();
+    AFFrProject project = vm.getProject();
+    @Nullable Path mirrorPath = project.getMirrorPath();
+    if (mirrorPath == null) {
+      showError(I18n.get("newCal.tutorial.error.noMirror"));
+      return;
+    }
+
+    TextInputDialog nameDialog = new TextInputDialog();
+    nameDialog.setTitle(I18n.get("newCal.tutorial.dialog.title"));
+    nameDialog.setHeaderText(I18n.get("newCal.tutorial.dialog.header"));
+    nameDialog.initOwner(requireItemList().getScene().getWindow());
+
+    Optional<String> result = nameDialog.showAndWait();
+    if (result.isEmpty()) return;
+    String calName = result.get().trim();
+    if (calName.isBlank()) return;
+
+    Path writeDir = mirrorPath;
+    List<ProjectItem> snapshot = List.copyOf(vm.getProjectItems());
+
+    Task<AFFrCalculation> task =
+        new Task<>() {
+          @Override
+          protected AFFrCalculation call() throws Exception {
+            Files.createDirectories(writeDir);
+            return ProjectWriter.createCalculation(
+                writeDir, calName, snapshot, project, AFFrCalculationModel.DEFAULT);
           }
         };
 
