@@ -196,7 +196,7 @@ public final class ProjectController {
     nameDialog.setHeaderText(I18n.get("newCal.tutorial.dialog.header"));
     nameDialog.initOwner(requireItemList().getScene().getWindow());
 
-    Optional<String> result = nameDialog.showAndWait();
+    Optional<@Nullable String> result = nameDialog.showAndWait();
     if (result.isEmpty()) return;
     String calName = result.get().trim();
     if (calName.isBlank()) return;
