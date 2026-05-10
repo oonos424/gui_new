@@ -39,7 +39,6 @@ public final class SettingsDialog {
     Dialog<ButtonType> dialog = new Dialog<>();
     dialog.initOwner(owner);
     dialog.setTitle(I18n.get("settings.title"));
-    dialog.setHeaderText(null);
     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
     TextField guiPathField =
