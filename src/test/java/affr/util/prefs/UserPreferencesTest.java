@@ -9,6 +9,9 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -34,6 +37,9 @@ final class UserPreferencesTest {
     assertFalse(Double.isFinite(prefs.windowY()), "windowY should be NaN when not saved");
     assertNull(prefs.browserViewMode(), "browserViewMode should be null when not saved");
     assertNull(prefs.browserPath(), "browserPath should be null when not saved");
+    // Install paths fall back to platform defaults (non-null on Windows, null elsewhere).
+    assertEquals(UserPreferences.defaultGuiInstallPath(), prefs.guiInstallPath());
+    assertEquals(UserPreferences.defaultSolverInstallPath(), prefs.solverInstallPath());
   }
 
   // -------------------------------------------------------------------------
@@ -217,6 +223,8 @@ final class UserPreferencesTest {
   void allFieldsRoundTrip(@TempDir Path dir) {
     Path file = dir.resolve("prefs.properties");
     Path savedPath = dir.resolve("workspace");
+    Path guiPath = dir.resolve("gui");
+    Path solverPath = dir.resolve("solver");
 
     UserPreferences prefs = UserPreferences.loadFrom(file);
     prefs.setLocale(Locale.JAPANESE);
@@ -224,6 +232,8 @@ final class UserPreferencesTest {
     prefs.setWindowPosition(100, 50);
     prefs.setBrowserViewMode("ICON");
     prefs.setBrowserPath(savedPath);
+    prefs.setGuiInstallPath(guiPath);
+    prefs.setSolverInstallPath(solverPath);
     prefs.save();
 
     UserPreferences loaded = UserPreferences.loadFrom(file);
@@ -234,6 +244,8 @@ final class UserPreferencesTest {
     assertEquals(50.0, loaded.windowY());
     assertEquals("ICON", loaded.browserViewMode());
     assertEquals(savedPath, loaded.browserPath());
+    assertEquals(guiPath, loaded.guiInstallPath());
+    assertEquals(solverPath, loaded.solverInstallPath());
   }
 
   @Test
@@ -272,6 +284,8 @@ final class UserPreferencesTest {
     assertFalse(Double.isFinite(prefs.windowY()));
     assertNull(prefs.browserViewMode());
     assertNull(prefs.browserPath());
+    assertEquals(UserPreferences.defaultGuiInstallPath(), prefs.guiInstallPath());
+    assertEquals(UserPreferences.defaultSolverInstallPath(), prefs.solverInstallPath());
   }
 
   @Test
@@ -282,5 +296,158 @@ final class UserPreferencesTest {
     prefs.save();
 
     assertTrue(java.nio.file.Files.exists(file), "prefs file should have been created");
+  }
+
+  // -------------------------------------------------------------------------
+  // GUI install path
+  // -------------------------------------------------------------------------
+
+  @Test
+  void guiInstallPathRoundTrip(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+    Path guiPath = dir.resolve("AFFrGUI");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setGuiInstallPath(guiPath);
+    prefs.save();
+
+    assertEquals(guiPath, UserPreferences.loadFrom(file).guiInstallPath());
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  void guiInstallPathDefaultIsWindowsInstallDirOnWindows(@TempDir Path dir) {
+    UserPreferences prefs = UserPreferences.loadFrom(dir.resolve("prefs.properties"));
+
+    assertEquals(Path.of("C:\\Program Files\\Advancesoft\\AFFrGUI"), prefs.guiInstallPath());
+  }
+
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  void guiInstallPathDefaultIsNullOnNonWindows(@TempDir Path dir) {
+    UserPreferences prefs = UserPreferences.loadFrom(dir.resolve("prefs.properties"));
+
+    assertNull(prefs.guiInstallPath());
+  }
+
+  @Test
+  void explicitGuiInstallPathOverridesPlatformDefault(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+    Path customPath = dir.resolve("custom_gui");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setGuiInstallPath(customPath);
+    prefs.save();
+
+    // Must come back as the explicit path regardless of platform default.
+    assertEquals(customPath, UserPreferences.loadFrom(file).guiInstallPath());
+  }
+
+  @Test
+  void corruptGuiInstallPathFallsBackToPlatformDefault(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("prefs.properties");
+    java.nio.file.Files.writeString(file, "gui.installPath=\u0000invalid\n");
+
+    assertEquals(
+        UserPreferences.defaultGuiInstallPath(), UserPreferences.loadFrom(file).guiInstallPath());
+  }
+
+  @Test
+  void blankGuiInstallPathFallsBackToPlatformDefault(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("prefs.properties");
+    java.nio.file.Files.writeString(file, "gui.installPath=   \n");
+
+    assertEquals(
+        UserPreferences.defaultGuiInstallPath(), UserPreferences.loadFrom(file).guiInstallPath());
+  }
+
+  @Test
+  void settingGuiInstallPathToNullRestoresPlatformDefaultAfterReload(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setGuiInstallPath(null);
+    prefs.save();
+
+    // Key is absent from file; reload must return the platform default (null on non-Windows).
+    assertEquals(
+        UserPreferences.defaultGuiInstallPath(), UserPreferences.loadFrom(file).guiInstallPath());
+  }
+
+  // -------------------------------------------------------------------------
+  // Solver install path
+  // -------------------------------------------------------------------------
+
+  @Test
+  void solverInstallPathRoundTrip(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+    Path solverPath = dir.resolve("AFFr");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setSolverInstallPath(solverPath);
+    prefs.save();
+
+    assertEquals(solverPath, UserPreferences.loadFrom(file).solverInstallPath());
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  void solverInstallPathDefaultIsWindowsInstallDirOnWindows(@TempDir Path dir) {
+    UserPreferences prefs = UserPreferences.loadFrom(dir.resolve("prefs.properties"));
+
+    assertEquals(Path.of("C:\\Program Files\\Advancesoft\\AFFr"), prefs.solverInstallPath());
+  }
+
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  void solverInstallPathDefaultIsNullOnNonWindows(@TempDir Path dir) {
+    UserPreferences prefs = UserPreferences.loadFrom(dir.resolve("prefs.properties"));
+
+    assertNull(prefs.solverInstallPath());
+  }
+
+  @Test
+  void explicitSolverInstallPathOverridesPlatformDefault(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+    Path customPath = dir.resolve("custom_solver");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setSolverInstallPath(customPath);
+    prefs.save();
+
+    assertEquals(customPath, UserPreferences.loadFrom(file).solverInstallPath());
+  }
+
+  @Test
+  void corruptSolverInstallPathFallsBackToPlatformDefault(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("prefs.properties");
+    java.nio.file.Files.writeString(file, "solver.installPath=\u0000invalid\n");
+
+    assertEquals(
+        UserPreferences.defaultSolverInstallPath(),
+        UserPreferences.loadFrom(file).solverInstallPath());
+  }
+
+  @Test
+  void blankSolverInstallPathFallsBackToPlatformDefault(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("prefs.properties");
+    java.nio.file.Files.writeString(file, "solver.installPath=   \n");
+
+    assertEquals(
+        UserPreferences.defaultSolverInstallPath(),
+        UserPreferences.loadFrom(file).solverInstallPath());
+  }
+
+  @Test
+  void settingSolverInstallPathToNullRestoresPlatformDefaultAfterReload(@TempDir Path dir) {
+    Path file = dir.resolve("prefs.properties");
+
+    UserPreferences prefs = UserPreferences.loadFrom(file);
+    prefs.setSolverInstallPath(null);
+    prefs.save();
+
+    assertEquals(
+        UserPreferences.defaultSolverInstallPath(),
+        UserPreferences.loadFrom(file).solverInstallPath());
   }
 }

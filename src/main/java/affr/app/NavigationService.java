@@ -76,6 +76,7 @@ public final class NavigationService {
       throw new IllegalStateException("TopController was not set by FXMLLoader");
     }
     controller.init(topVm, fbVm, fileBrowserNode);
+    controller.setOnSettingAction(() -> SettingsDialog.show(stage, prefs));
 
     this.topController = controller;
     this.fileBrowserViewModel = fbVm;

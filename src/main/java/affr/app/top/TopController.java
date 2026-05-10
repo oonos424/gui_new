@@ -13,6 +13,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -43,6 +44,7 @@ public final class TopController {
   @FXML private @Nullable BorderPane rootPane;
   @FXML private @Nullable ListView<TopCategory> categoryList;
   @FXML private @Nullable StackPane viewerPane;
+  @FXML private @Nullable MenuItem settingMenuItem;
   @FXML private @Nullable RadioMenuItem langEnItem;
   @FXML private @Nullable RadioMenuItem langJaItem;
 
@@ -164,6 +166,14 @@ public final class TopController {
     // ── Back / Home navigation ───────────────────────────────────────
     requireHeaderBackButton().setOnAction(e -> exitProjectMode());
     requireHeaderHomeButton().setOnAction(e -> exitProjectMode());
+  }
+
+  /**
+   * Registers the action to run when the user clicks the "Setting" menu item. Must be called after
+   * FXML injection (i.e. after the controller is loaded by {@link javafx.fxml.FXMLLoader}).
+   */
+  public void setOnSettingAction(Runnable action) {
+    requireSettingMenuItem().setOnAction(e -> action.run());
   }
 
   /**
@@ -324,6 +334,12 @@ public final class TopController {
     Label lbl = appTitleLabel;
     if (lbl == null) throw new IllegalStateException("appTitleLabel not injected");
     return lbl;
+  }
+
+  private MenuItem requireSettingMenuItem() {
+    MenuItem item = settingMenuItem;
+    if (item == null) throw new IllegalStateException("settingMenuItem not injected");
+    return item;
   }
 
   private RadioMenuItem requireLangEnItem() {

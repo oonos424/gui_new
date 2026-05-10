@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import affr.app.top.file.FileBrowserController;
 import affr.data.DataStore;
@@ -16,6 +17,7 @@ import affr.util.prefs.UserPreferences;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -48,6 +50,7 @@ final class TopControllerTest {
   private TopController controller;
   private ListView<TopCategory> categoryList;
   private StackPane viewerPane;
+  private Parent root;
 
   @Start
   @SuppressWarnings("unchecked")
@@ -70,7 +73,7 @@ final class TopControllerTest {
             TopController.class.getResource("TopController.fxml"),
             "TopController.fxml not found on classpath");
     FXMLLoader loader = new FXMLLoader(fxml);
-    Parent root = loader.load();
+    root = loader.load();
 
     controller = loader.getController();
     viewModel = new TopViewModel();
@@ -140,6 +143,20 @@ final class TopControllerTest {
       assertSame(c, categoryList.getSelectionModel().getSelectedItem());
       assertViewerRendered(c, viewerPane);
     }
+  }
+
+  @Test
+  void settingActionRunnableIsInvokedWhenMenuItemFired(FxRobot robot) {
+    AtomicBoolean called = new AtomicBoolean(false);
+    robot.interact(() -> controller.setOnSettingAction(() -> called.set(true)));
+
+    // Open the "Menu" MenuButton, then click "Setting".
+    robot.clickOn(".header-menu-button");
+    WaitForAsyncUtils.waitForFxEvents();
+    robot.clickOn("Setting");
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertTrue(called.get(), "setting action runnable should have been invoked");
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
