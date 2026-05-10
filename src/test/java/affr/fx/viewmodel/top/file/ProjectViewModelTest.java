@@ -298,4 +298,74 @@ final class ProjectViewModelTest {
 
     assertEquals("memo text", viewModel.getProjectMemo());
   }
+
+  // ── Open-calculation request ──────────────────────────────────────────────
+
+  @Test
+  void openCalculationRequestIsNullInitially() {
+    ProjectViewModel viewModel = vm();
+
+    assertNull(viewModel.openCalculationRequestProperty().get());
+  }
+
+  @Test
+  void requestOpenCalculationSetsTheProperty() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+
+    viewModel.requestOpenCalculation(cal);
+
+    assertSame(cal, viewModel.openCalculationRequestProperty().get());
+  }
+
+  @Test
+  void clearOpenCalculationRequestResetsToNull() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+    viewModel.requestOpenCalculation(cal);
+
+    viewModel.clearOpenCalculationRequest();
+
+    assertNull(viewModel.openCalculationRequestProperty().get());
+  }
+
+  @Test
+  void requestOpenCalculationFiresChangeListenerOnSetAndClear() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+    AtomicInteger calls = new AtomicInteger();
+    viewModel.openCalculationRequestProperty().addListener((obs, o, n) -> calls.incrementAndGet());
+
+    viewModel.requestOpenCalculation(cal);
+    viewModel.clearOpenCalculationRequest();
+
+    assertEquals(2, calls.get());
+  }
+
+  /**
+   * Regression: re-opening the same calculation must work after returning from the Input Editor.
+   * Without {@link ProjectViewModel#clearOpenCalculationRequest} between the two requests, the
+   * second {@code set(cal)} would be a no-op (same value) and the listener would never fire.
+   */
+  @Test
+  void sameCalculationCanBeRequestedAgainAfterClear() {
+    AFFrCalculation cal = makeCal("cal_01");
+    ProjectViewModel viewModel = vm(cal);
+    AtomicInteger setCalls = new AtomicInteger();
+    viewModel
+        .openCalculationRequestProperty()
+        .addListener(
+            (obs, o, n) -> {
+              if (n != null) {
+                setCalls.incrementAndGet();
+              }
+            });
+
+    viewModel.requestOpenCalculation(cal);
+    viewModel.clearOpenCalculationRequest();
+    viewModel.requestOpenCalculation(cal);
+
+    assertEquals(2, setCalls.get());
+    assertSame(cal, viewModel.openCalculationRequestProperty().get());
+  }
 }
