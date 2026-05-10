@@ -397,10 +397,8 @@ final class ProjectLoaderTest {
     Path proj = Files.createDirectory(root.resolve("proj"));
     Path mirror = Files.createDirectories(root.resolve(".tutorials").resolve("proj"));
 
-    Files.writeString(
-        Files.createDirectory(proj.resolve("cal_01")).resolve(CAL_PROPERTY), "{}");
-    Files.writeString(
-        Files.createDirectory(mirror.resolve("cal_02")).resolve(CAL_PROPERTY), "{}");
+    Files.writeString(Files.createDirectory(proj.resolve("cal_01")).resolve(CAL_PROPERTY), "{}");
+    Files.writeString(Files.createDirectory(mirror.resolve("cal_02")).resolve(CAL_PROPERTY), "{}");
 
     AFFrProject project = new ProjectLoader().load(proj, true, mirror);
 

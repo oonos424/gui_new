@@ -275,4 +275,43 @@ final class DataStoreTest {
     assertInstanceOf(ProjectEntry.class, entries.get(0));
     assertEquals("new_proj", entries.get(0).name());
   }
+
+  // -------------------------------------------------------------------------
+  // treatAllDirsAsProjects mode (used for tutorial inventory)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void treatAllDirsAsProjectsTreatsPlainDirAsProjectEntry(@TempDir Path root) throws IOException {
+    Files.createDirectory(root.resolve("CASE1_Bump"));
+    DataStore store = new DataStore(root, true);
+
+    List<BrowserEntry> entries = store.loadChildren(root);
+
+    assertEquals(1, entries.size());
+    assertInstanceOf(ProjectEntry.class, entries.get(0));
+    assertEquals("CASE1_Bump", entries.get(0).name());
+  }
+
+  @Test
+  void treatAllDirsAsProjectsAlsoTreatsDirWithMarkerAsProjectEntry(@TempDir Path root)
+      throws IOException {
+    Path proj = Files.createDirectory(root.resolve("CASE2_Ramp"));
+    Files.createFile(proj.resolve(PROJECT_MARKER));
+    DataStore store = new DataStore(root, true);
+
+    List<BrowserEntry> entries = store.loadChildren(root);
+
+    assertEquals(1, entries.size());
+    assertInstanceOf(ProjectEntry.class, entries.get(0));
+  }
+
+  @Test
+  void regularDataStoreDoesNotTreatAllDirsAsProjects(@TempDir Path root) throws IOException {
+    Files.createDirectory(root.resolve("plain_dir"));
+    DataStore store = new DataStore(root); // default: treatAllDirsAsProjects = false
+
+    List<BrowserEntry> entries = store.loadChildren(root);
+
+    assertInstanceOf(FolderEntry.class, entries.get(0));
+  }
 }

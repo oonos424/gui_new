@@ -34,4 +34,26 @@ final class PathFormattingTest {
 
     assertEquals("~/.affr/alpha/beta/gamma", formatted);
   }
+
+  // ── breadcrumb with custom root label ────────────────────────────────────
+
+  @Test
+  void breadcrumbWithCustomRootLabelAtRootShowsLabel() {
+    Path root = Path.of("ws-root");
+    assertEquals("tutorials", PathFormatting.breadcrumb(root, root, "tutorials"));
+  }
+
+  @Test
+  void breadcrumbWithCustomRootLabelForChildAppendssegment() {
+    Path root = Path.of("ws-root");
+    Path child = root.resolve("CASE1_Bump");
+    assertEquals("tutorials/CASE1_Bump", PathFormatting.breadcrumb(child, root, "tutorials"));
+  }
+
+  @Test
+  void breadcrumbWithCustomRootLabelForNestedChild() {
+    Path root = Path.of("ws-root");
+    Path child = root.resolve("cases").resolve("bump");
+    assertEquals("tutorials/cases/bump", PathFormatting.breadcrumb(child, root, "tutorials"));
+  }
 }
