@@ -1,0 +1,24 @@
+---
+description: Location of the legacy AFFr GUI codebase (the predecessor being rewritten in this repo)
+globs:
+alwaysApply: true
+---
+
+# Legacy AFFr GUI Codebase
+
+The legacy AFFr GUI code is the previous version of the application that this
+repo is rewriting. It is useful as a reference for behavior, data formats, and
+domain quirks that may not be fully captured in the spec.
+
+Its location varies by machine/OS, so paths are recorded per-OS below.
+
+## Paths
+
+- **Windows**: _not yet recorded — ask the user when needed_
+- **macOS**: _not yet recorded — ask the user when needed_
+- **Linux**: _not yet recorded — ask the user when needed_
+
+When the user reveals the legacy GUI path on a new OS, update the matching
+entry above. If the path contains non-ASCII segments (e.g. a Google Drive
+`マイドライブ` mount), follow the same wildcard-resolution approach used for
+the product spec path.
