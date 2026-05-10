@@ -164,79 +164,103 @@ final class TopControllerTest {
     assertTrue(called.get(), "setting action runnable should have been invoked");
   }
 
-  // ── Input Editor mode swap ────────────────────────────────────────────────
+  // ── Workspace tab management ──────────────────────────────────────────────
   //
-  // {@link TopController#enterInputEditorMode(Node)} and {@link
-  // TopController#exitInputEditorMode()} together form the layout-swap contract used by
-  // NavigationService when the user opens a calculation.
+  // Tests for {@link TopController#openTab(String, Node, Runnable)},
+  // {@link TopController#closeTab(int)}, and {@link TopController#indexOfNode(Node)}.
 
   @Test
-  void enterInputEditorModeRemovesTopAndSwapsViewer(FxRobot robot) {
-    Node projectNode = new Label("project-view");
-    Node editorNode = new Label("editor-view");
-    robot.interact(() -> controller.enterProjectMode(projectNode));
+  void openTabAppendsTabAndShowsItsContent(FxRobot robot) {
+    Node tabContent = new Label("input-editor");
+    robot.interact(() -> controller.openTab("Calc1", tabContent, () -> {}));
     WaitForAsyncUtils.waitForFxEvents();
 
-    robot.interact(() -> controller.enterInputEditorMode(editorNode));
-    WaitForAsyncUtils.waitForFxEvents();
-
-    assertNull(rootPane.getTop(), "shell header must be removed in Input Editor mode");
     assertEquals(1, viewerPane.getChildren().size());
-    assertSame(editorNode, viewerPane.getChildren().get(0));
+    assertSame(
+        tabContent, viewerPane.getChildren().get(0), "viewerPane must show the new tab's content");
   }
 
   @Test
-  void exitInputEditorModeRestoresOriginalTopAndProjectViewer(FxRobot robot) {
-    Node projectNode = new Label("project-view");
-    Node editorNode = new Label("editor-view");
-    robot.interact(() -> controller.enterProjectMode(projectNode));
-    WaitForAsyncUtils.waitForFxEvents();
-    Node originalTop = rootPane.getTop();
-    assertNotNull(originalTop, "shell header must exist before entering Input Editor mode");
-
-    robot.interact(() -> controller.enterInputEditorMode(editorNode));
-    WaitForAsyncUtils.waitForFxEvents();
-    robot.interact(() -> controller.exitInputEditorMode());
+  void openTabHidesCategoryList(FxRobot robot) {
+    robot.interact(() -> controller.openTab("Calc1", new Label("content"), () -> {}));
     WaitForAsyncUtils.waitForFxEvents();
 
-    assertSame(originalTop, rootPane.getTop(), "shell header must be restored on exit");
-    assertEquals(1, viewerPane.getChildren().size());
-    assertSame(projectNode, viewerPane.getChildren().get(0));
-  }
-
-  /**
-   * Regression for the {@code if (savedTopNode == null)} guard in {@link
-   * TopController#enterInputEditorMode(Node)}: a second enter must not overwrite the previously
-   * saved header with the (now-null) top region, otherwise exit would leave the header permanently
-   * empty.
-   */
-  @Test
-  void inputEditorDoubleEnterDoesNotLoseSavedTop(FxRobot robot) {
-    Node projectNode = new Label("project-view");
-    Node firstEditor = new Label("editor-1");
-    Node secondEditor = new Label("editor-2");
-    robot.interact(() -> controller.enterProjectMode(projectNode));
-    WaitForAsyncUtils.waitForFxEvents();
-    Node originalTop = rootPane.getTop();
-
-    robot.interact(() -> controller.enterInputEditorMode(firstEditor));
-    WaitForAsyncUtils.waitForFxEvents();
-    robot.interact(() -> controller.enterInputEditorMode(secondEditor));
-    WaitForAsyncUtils.waitForFxEvents();
-    robot.interact(() -> controller.exitInputEditorMode());
-    WaitForAsyncUtils.waitForFxEvents();
-
-    assertSame(originalTop, rootPane.getTop(), "double-enter must not lose the saved top node");
+    assertNull(rootPane.getLeft(), "category list must be hidden when a secondary tab is active");
   }
 
   @Test
-  void exitInputEditorModeWithoutEnterIsNoOp(FxRobot robot) {
-    Node originalTop = rootPane.getTop();
+  void closeTabReturnsToPrimaryTab(FxRobot robot) {
+    Node tabContent = new Label("input-editor");
+    robot.interact(() -> controller.openTab("Calc1", tabContent, () -> {}));
+    WaitForAsyncUtils.waitForFxEvents();
+    int idx = controller.indexOfNode(tabContent);
 
-    robot.interact(() -> controller.exitInputEditorMode());
+    robot.interact(() -> controller.closeTab(idx));
     WaitForAsyncUtils.waitForFxEvents();
 
-    assertSame(originalTop, rootPane.getTop(), "exit must not mutate top when never entered");
+    assertFalse(
+        viewerPane.getChildren().isEmpty(), "viewerPane should not be empty after closing tab");
+    assertFalse(
+        viewerPane.getChildren().get(0) == tabContent,
+        "closed tab's content must not remain in viewerPane");
+  }
+
+  @Test
+  void closeTabRestoresCategoryListOnPrimaryTab(FxRobot robot) {
+    robot.interact(() -> controller.openTab("Calc1", new Label("content"), () -> {}));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    robot.interact(() -> controller.closeTab(1));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertNotNull(
+        rootPane.getLeft(), "category list must be restored after returning to primary tab");
+  }
+
+  @Test
+  void closePrimaryTabIsNoOp(FxRobot robot) {
+    Node originalContent =
+        viewerPane.getChildren().isEmpty() ? null : viewerPane.getChildren().get(0);
+
+    robot.interact(() -> controller.closeTab(0));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    if (originalContent != null) {
+      assertSame(
+          originalContent,
+          viewerPane.getChildren().get(0),
+          "primary tab content must not change when closeTab(0) is called");
+    }
+  }
+
+  @Test
+  void indexOfNodeReturnsCorrectIndex(FxRobot robot) {
+    Node first = new Label("editor-1");
+    Node second = new Label("editor-2");
+    robot.interact(
+        () -> {
+          controller.openTab("Calc1", first, () -> {});
+          controller.openTab("Calc2", second, () -> {});
+        });
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertEquals(1, controller.indexOfNode(first));
+    assertEquals(2, controller.indexOfNode(second));
+    assertEquals(-1, controller.indexOfNode(new Label("unknown")));
+  }
+
+  @Test
+  void openMultipleTabsShowsCorrectContent(FxRobot robot) {
+    Node first = new Label("editor-1");
+    Node second = new Label("editor-2");
+    robot.interact(
+        () -> {
+          controller.openTab("Calc1", first, () -> {});
+          controller.openTab("Calc2", second, () -> {});
+        });
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertSame(second, viewerPane.getChildren().get(0), "last opened tab must be active");
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

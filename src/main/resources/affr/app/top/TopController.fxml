@@ -13,6 +13,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
 <BorderPane
     fx:id="rootPane"
@@ -24,75 +25,83 @@
     <ToggleGroup fx:id="languageToggleGroup"/>
   </fx:define>
 
-  <!-- ── HEADER (top, 50 px) ─────────────────────────────────────────── -->
+  <!-- ── HEADER + TAB BAR (top) ──────────────────────────────────────── -->
   <top>
-    <BorderPane prefHeight="50.0" styleClass="app-header">
+    <VBox>
 
-      <!-- App title + back/home navigation (back nav hidden on browser screens) -->
-      <left>
-        <HBox alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
-          <BorderPane.margin>
-            <Insets left="8.0"/>
-          </BorderPane.margin>
-          <!-- Back / Home buttons — shown when a project is open -->
-          <HBox fx:id="headerBackNav" visible="false" managed="false"
-                spacing="4.0" alignment="CENTER_LEFT">
-            <Button fx:id="headerBackButton" text="←  Back" styleClass="header-nav-up-button"/>
-            <Button fx:id="headerHomeButton" text="⌂  Home" styleClass="header-nav-up-button"/>
+      <!-- App header (50 px) -->
+      <BorderPane prefHeight="50.0" styleClass="app-header">
+
+        <!-- App title + back/home navigation (back nav hidden on browser screens) -->
+        <left>
+          <HBox alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
+            <BorderPane.margin>
+              <Insets left="8.0"/>
+            </BorderPane.margin>
+            <!-- Back / Home buttons — shown when a project is open (primary tab, project mode) -->
+            <HBox fx:id="headerBackNav" visible="false" managed="false"
+                  spacing="4.0" alignment="CENTER_LEFT">
+              <Button fx:id="headerBackButton" text="←  Back" styleClass="header-nav-up-button"/>
+              <Button fx:id="headerHomeButton" text="⌂  Home" styleClass="header-nav-up-button"/>
+            </HBox>
+            <!-- App title — shown on the browser screens -->
+            <Label fx:id="appTitleLabel" text="AFFr" styleClass="app-title">
+              <HBox.margin>
+                <Insets left="4.0"/>
+              </HBox.margin>
+            </Label>
           </HBox>
-          <!-- App title — shown on the browser screens -->
-          <Label fx:id="appTitleLabel" text="AFFr" styleClass="app-title">
-            <HBox.margin>
-              <Insets left="4.0"/>
-            </HBox.margin>
-          </Label>
-        </HBox>
-      </left>
+        </left>
 
-      <!-- Category-specific navigation controls — shown/hidden by TopController -->
-      <center>
-        <HBox fx:id="headerNav"
-              alignment="CENTER_LEFT"
-              spacing="6.0"
-              visible="false"
-              BorderPane.alignment="CENTER">
-          <padding>
-            <Insets left="16.0"/>
-          </padding>
-          <Button fx:id="headerNavUpButton"
-                  text="↑  Up"
-                  styleClass="header-nav-up-button"/>
-          <Label fx:id="headerNavPathLabel"
-                 styleClass="header-nav-path"
-                 text=""/>
-        </HBox>
-      </center>
+        <!-- Category-specific navigation controls — shown/hidden by TopController -->
+        <center>
+          <HBox fx:id="headerNav"
+                alignment="CENTER_LEFT"
+                spacing="6.0"
+                visible="false"
+                BorderPane.alignment="CENTER">
+            <padding>
+              <Insets left="16.0"/>
+            </padding>
+            <Button fx:id="headerNavUpButton"
+                    text="↑  Up"
+                    styleClass="header-nav-up-button"/>
+            <Label fx:id="headerNavPathLabel"
+                   styleClass="header-nav-path"
+                   text=""/>
+          </HBox>
+        </center>
 
-      <!-- Global menu — always visible -->
-      <right>
-        <HBox alignment="CENTER_RIGHT" spacing="4.0">
-          <BorderPane.margin>
-            <Insets right="8.0"/>
-          </BorderPane.margin>
-          <Separator orientation="VERTICAL"/>
-          <MenuButton text="Menu" styleClass="header-menu-button">
-            <items>
-              <MenuItem fx:id="settingMenuItem" text="Setting"/>
-              <MenuItem text="About"/>
-              <Menu text="Language">
-                <items>
-                  <RadioMenuItem fx:id="langEnItem" text="English"
-                                 toggleGroup="$languageToggleGroup"/>
-                  <RadioMenuItem fx:id="langJaItem" text="日本語"
-                                 toggleGroup="$languageToggleGroup"/>
-                </items>
-              </Menu>
-            </items>
-          </MenuButton>
-        </HBox>
-      </right>
+        <!-- Global menu — always visible -->
+        <right>
+          <HBox alignment="CENTER_RIGHT" spacing="4.0">
+            <BorderPane.margin>
+              <Insets right="8.0"/>
+            </BorderPane.margin>
+            <Separator orientation="VERTICAL"/>
+            <MenuButton text="Menu" styleClass="header-menu-button">
+              <items>
+                <MenuItem fx:id="settingMenuItem" text="Setting"/>
+                <MenuItem text="About"/>
+                <Menu text="Language">
+                  <items>
+                    <RadioMenuItem fx:id="langEnItem" text="English"
+                                   toggleGroup="$languageToggleGroup"/>
+                    <RadioMenuItem fx:id="langJaItem" text="日本語"
+                                   toggleGroup="$languageToggleGroup"/>
+                  </items>
+                </Menu>
+              </items>
+            </MenuButton>
+          </HBox>
+        </right>
 
-    </BorderPane>
+      </BorderPane>
+
+      <!-- Tab bar — populated at runtime by TopController -->
+      <HBox fx:id="tabBar" styleClass="tab-bar"/>
+
+    </VBox>
   </top>
 
   <!-- ── MANAGER (left — category selector) ─────────────────────────── -->
