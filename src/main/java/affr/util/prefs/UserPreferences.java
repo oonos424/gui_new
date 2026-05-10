@@ -34,6 +34,8 @@ public final class UserPreferences {
   private static final String KEY_WINDOW_Y = "window.y";
   private static final String KEY_BROWSER_VIEW_MODE = "browser.viewMode";
   private static final String KEY_BROWSER_PATH = "browser.path";
+  private static final String KEY_GUI_INSTALL_PATH = "gui.installPath";
+  private static final String KEY_SOLVER_INSTALL_PATH = "solver.installPath";
 
   private static final Locale DEFAULT_LOCALE = Locale.ENGLISH;
   public static final double DEFAULT_WINDOW_WIDTH = 1200;
@@ -55,6 +57,20 @@ public final class UserPreferences {
   /** {@code null} means start at the workspace root. */
   private @Nullable Path browserPath;
 
+  /**
+   * Root directory of the AFFr GUI installation (e.g. {@code C:\Program
+   * Files\Advancesoft\AFFrGUI}). {@code null} means neither explicitly configured nor a known
+   * platform default. When set, the tutorial set is resolved as {@code guiInstallPath/tutorials/}.
+   */
+  private @Nullable Path guiInstallPath;
+
+  /**
+   * Root directory of the AFFr solver installation (e.g. {@code C:\Program
+   * Files\Advancesoft\AFFr}). {@code null} means neither explicitly configured nor a known platform
+   * default.
+   */
+  private @Nullable Path solverInstallPath;
+
   private UserPreferences(
       Path prefsFile,
       Locale locale,
@@ -63,7 +79,9 @@ public final class UserPreferences {
       double windowX,
       double windowY,
       @Nullable String browserViewMode,
-      @Nullable Path browserPath) {
+      @Nullable Path browserPath,
+      @Nullable Path guiInstallPath,
+      @Nullable Path solverInstallPath) {
     this.prefsFile = prefsFile;
     this.locale = locale;
     this.windowWidth = windowWidth;
@@ -72,6 +90,8 @@ public final class UserPreferences {
     this.windowY = windowY;
     this.browserViewMode = browserViewMode;
     this.browserPath = browserPath;
+    this.guiInstallPath = guiInstallPath;
+    this.solverInstallPath = solverInstallPath;
   }
 
   /**
@@ -94,6 +114,8 @@ public final class UserPreferences {
       } catch (IOException ignored) {
       }
     }
+    @Nullable Path storedGuiPath = parsePath(props.getProperty(KEY_GUI_INSTALL_PATH));
+    @Nullable Path storedSolverPath = parsePath(props.getProperty(KEY_SOLVER_INSTALL_PATH));
     return new UserPreferences(
         prefsFile,
         parseLocale(props.getProperty(KEY_LANGUAGE)),
@@ -102,7 +124,9 @@ public final class UserPreferences {
         parseFiniteDouble(props.getProperty(KEY_WINDOW_X)),
         parseFiniteDouble(props.getProperty(KEY_WINDOW_Y)),
         props.getProperty(KEY_BROWSER_VIEW_MODE),
-        parsePath(props.getProperty(KEY_BROWSER_PATH)));
+        parsePath(props.getProperty(KEY_BROWSER_PATH)),
+        storedGuiPath != null ? storedGuiPath : defaultGuiInstallPath(),
+        storedSolverPath != null ? storedSolverPath : defaultSolverInstallPath());
   }
 
   /** Returns the saved UI locale. */
@@ -182,6 +206,63 @@ public final class UserPreferences {
     this.browserPath = path;
   }
 
+  /**
+   * Returns the GUI installation directory, or {@code null} if neither explicitly configured nor a
+   * known platform default exists. The tutorial set is resolved as {@code
+   * guiInstallPath().resolve("tutorials")}.
+   */
+  public @Nullable Path guiInstallPath() {
+    return guiInstallPath;
+  }
+
+  /** Updates the in-memory GUI installation path. Call {@link #save()} to persist the change. */
+  public void setGuiInstallPath(@Nullable Path path) {
+    this.guiInstallPath = path;
+  }
+
+  /**
+   * Returns the solver installation directory, or {@code null} if neither explicitly configured nor
+   * a known platform default exists.
+   */
+  public @Nullable Path solverInstallPath() {
+    return solverInstallPath;
+  }
+
+  /** Updates the in-memory solver installation path. Call {@link #save()} to persist the change. */
+  public void setSolverInstallPath(@Nullable Path path) {
+    this.solverInstallPath = path;
+  }
+
+  /**
+   * Returns the platform-specific default GUI installation path, or {@code null} on platforms where
+   * no standard location is known.
+   *
+   * <ul>
+   *   <li>Windows: {@code C:\Program Files\Advancesoft\AFFrGUI}
+   * </ul>
+   */
+  public static @Nullable Path defaultGuiInstallPath() {
+    if (isWindows()) {
+      return Path.of("C:\\Program Files\\Advancesoft\\AFFrGUI");
+    }
+    return null;
+  }
+
+  /**
+   * Returns the platform-specific default solver installation path, or {@code null} on platforms
+   * where no standard location is known.
+   *
+   * <ul>
+   *   <li>Windows: {@code C:\Program Files\Advancesoft\AFFr}
+   * </ul>
+   */
+  public static @Nullable Path defaultSolverInstallPath() {
+    if (isWindows()) {
+      return Path.of("C:\\Program Files\\Advancesoft\\AFFr");
+    }
+    return null;
+  }
+
   /** Writes current preferences to the file this instance was loaded from. */
   public void save() {
     try {
@@ -199,11 +280,21 @@ public final class UserPreferences {
       if (browserPath != null) {
         props.setProperty(KEY_BROWSER_PATH, browserPath.toAbsolutePath().toString());
       }
+      if (guiInstallPath != null) {
+        props.setProperty(KEY_GUI_INSTALL_PATH, guiInstallPath.toAbsolutePath().toString());
+      }
+      if (solverInstallPath != null) {
+        props.setProperty(KEY_SOLVER_INSTALL_PATH, solverInstallPath.toAbsolutePath().toString());
+      }
       try (OutputStream out = Files.newOutputStream(prefsFile)) {
         props.store(out, "AFFr user preferences — do not edit while the app is running");
       }
     } catch (IOException ignored) {
     }
+  }
+
+  private static boolean isWindows() {
+    return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
   }
 
   private static Locale parseLocale(@Nullable String tag) {

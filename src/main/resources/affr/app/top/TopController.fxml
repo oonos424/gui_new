@@ -77,7 +77,7 @@
           <Separator orientation="VERTICAL"/>
           <MenuButton text="Menu" styleClass="header-menu-button">
             <items>
-              <MenuItem text="Setting"/>
+              <MenuItem fx:id="settingMenuItem" text="Setting"/>
               <MenuItem text="About"/>
               <Menu text="Language">
                 <items>
