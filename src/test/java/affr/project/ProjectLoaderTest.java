@@ -1,8 +1,11 @@
 package affr.project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -310,5 +313,100 @@ final class ProjectLoaderTest {
     AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
     assertEquals(AFFrCalculationModel.DEFAULT, c.getModel());
+  }
+
+  // ── Tutorial flag ─────────────────────────────────────────────────────────
+
+  @Test
+  void loadWithoutTutorialFlagReturnsFalseForIsTutorial(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+
+    assertFalse(new ProjectLoader().load(proj).isTutorial());
+  }
+
+  @Test
+  void loadWithTutorialFlagTrueReturnsIsTutorialTrue(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+
+    assertTrue(new ProjectLoader().load(proj, true).isTutorial());
+  }
+
+  @Test
+  void loadWithTutorialFlagFalseReturnsIsTutorialFalse(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+
+    assertFalse(new ProjectLoader().load(proj, false).isTutorial());
+  }
+
+  // ── Mirror path merging ───────────────────────────────────────────────────
+
+  @Test
+  void loadWithNullMirrorPathSetsMirrorPathNull(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+
+    assertNull(new ProjectLoader().load(proj, true, null).getMirrorPath());
+  }
+
+  @Test
+  void loadWithMirrorPathSetsMirrorPathOnProject(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path mirror = Files.createDirectories(root.resolve(".tutorials").resolve("proj"));
+
+    AFFrProject project = new ProjectLoader().load(proj, true, mirror);
+
+    assertEquals(mirror, project.getMirrorPath());
+  }
+
+  @Test
+  void loadWithMirrorPathMergesCalculationsFromBothDirs(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("tutorial_case"));
+    Path mirror = Files.createDirectories(root.resolve(".tutorials").resolve("tutorial_case"));
+
+    // Calculation in the tutorial installation dir.
+    Path tutCal = Files.createDirectory(proj.resolve("ref_cal"));
+    Files.writeString(tutCal.resolve(CAL_PROPERTY), "{}");
+
+    // Calculation written by the user in the mirror dir.
+    Path mirrorCal = Files.createDirectory(mirror.resolve("my_cal"));
+    Files.writeString(mirrorCal.resolve(CAL_PROPERTY), "{}");
+
+    AFFrProject project = new ProjectLoader().load(proj, true, mirror);
+    List<String> names = project.getItems().stream().map(ProjectItem::name).toList();
+
+    assertEquals(2, project.getItems().size());
+    assertTrue(names.contains("ref_cal"));
+    assertTrue(names.contains("my_cal"));
+  }
+
+  @Test
+  void loadWithAbsentMirrorDirLoadsOnlyPrimaryDir(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path missingMirror = root.resolve(".tutorials").resolve("proj"); // not created
+
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+
+    AFFrProject project = new ProjectLoader().load(proj, true, missingMirror);
+
+    assertEquals(1, project.getItems().size());
+    assertEquals("cal_01", project.getItems().get(0).name());
+  }
+
+  @Test
+  void mergedCalculationsHaveBackReferenceToProject(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path mirror = Files.createDirectories(root.resolve(".tutorials").resolve("proj"));
+
+    Files.writeString(
+        Files.createDirectory(proj.resolve("cal_01")).resolve(CAL_PROPERTY), "{}");
+    Files.writeString(
+        Files.createDirectory(mirror.resolve("cal_02")).resolve(CAL_PROPERTY), "{}");
+
+    AFFrProject project = new ProjectLoader().load(proj, true, mirror);
+
+    for (ProjectItem item : project.getItems()) {
+      assertNotNull(((AFFrCalculation) item).getProject());
+      assertSame(project, ((AFFrCalculation) item).getProject());
+    }
   }
 }

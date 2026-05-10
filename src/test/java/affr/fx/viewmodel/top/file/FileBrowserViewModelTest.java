@@ -429,6 +429,81 @@ final class FileBrowserViewModelTest {
     assertNull(vm.getOpenedProject());
   }
 
+  // ── Tutorial flag and mirror path propagation ──────────────────────────────
+
+  private static FileBrowserViewModel tutorialVmAt(Path tutorialRoot, Path mirrorRoot) {
+    FileBrowserViewModel vm =
+        new FileBrowserViewModel(
+            new DataStore(tutorialRoot, true), new ProjectLoader(), FxScheduler.synchronous());
+    vm.setReadOnlyRoot(true);
+    vm.setTutorialMirrorRoot(mirrorRoot);
+    return vm;
+  }
+
+  @Test
+  void openProjectFromTutorialVmSetsIsTutorialOnLoadedProject(@TempDir Path root)
+      throws IOException {
+    Path tutorialRoot = Files.createDirectory(root.resolve("tutorials"));
+    Path projDir = Files.createDirectory(tutorialRoot.resolve("CASE1_Bump"));
+    Path mirrorRoot = root.resolve(".tutorials");
+
+    FileBrowserViewModel vm = tutorialVmAt(tutorialRoot, mirrorRoot);
+    vm.setOpeningProject(new ProjectEntry(projDir, "CASE1_Bump", ""));
+
+    AFFrProject opened = vm.getOpenedProject();
+    assertNotNull(opened);
+    assertTrue(opened.isTutorial());
+  }
+
+  @Test
+  void openProjectFromTutorialVmSetsMirrorPathToCaseSubdir(@TempDir Path root) throws IOException {
+    Path tutorialRoot = Files.createDirectory(root.resolve("tutorials"));
+    Path projDir = Files.createDirectory(tutorialRoot.resolve("CASE1_Bump"));
+    Path mirrorRoot = root.resolve(".tutorials");
+
+    FileBrowserViewModel vm = tutorialVmAt(tutorialRoot, mirrorRoot);
+    vm.setOpeningProject(new ProjectEntry(projDir, "CASE1_Bump", ""));
+
+    AFFrProject opened = vm.getOpenedProject();
+    assertNotNull(opened);
+    assertEquals(mirrorRoot.resolve("CASE1_Bump"), opened.getMirrorPath());
+  }
+
+  @Test
+  void openProjectFromRegularVmSetsIsTutorialFalse(@TempDir Path root) throws IOException {
+    Path projDir = Files.createDirectory(root.resolve("myproj"));
+    Files.writeString(projDir.resolve(PROJECT_MARKER), "");
+    FileBrowserViewModel vm = vmAt(root);
+
+    vm.setOpeningProject(new ProjectEntry(projDir, "myproj", ""));
+
+    AFFrProject opened = vm.getOpenedProject();
+    assertNotNull(opened);
+    assertFalse(opened.isTutorial());
+    assertNull(opened.getMirrorPath());
+  }
+
+  @Test
+  void openProjectFromTutorialVmMergesCalculationsFromMirror(@TempDir Path root)
+      throws IOException {
+    Path tutorialRoot = Files.createDirectory(root.resolve("tutorials"));
+    Path projDir = Files.createDirectory(tutorialRoot.resolve("CASE1_Bump"));
+    Path mirrorRoot = Files.createDirectories(root.resolve(".tutorials"));
+    Path mirrorCaseDir = Files.createDirectories(mirrorRoot.resolve("CASE1_Bump"));
+
+    // A calculation already in the mirror (created by the user previously).
+    Path mirrorCal = Files.createDirectory(mirrorCaseDir.resolve("my_cal"));
+    Files.writeString(mirrorCal.resolve(".affr_property"), "{}");
+
+    FileBrowserViewModel vm = tutorialVmAt(tutorialRoot, mirrorRoot);
+    vm.setOpeningProject(new ProjectEntry(projDir, "CASE1_Bump", ""));
+
+    AFFrProject opened = vm.getOpenedProject();
+    assertNotNull(opened);
+    assertEquals(1, opened.getItems().size());
+    assertEquals("my_cal", opened.getItems().get(0).name());
+  }
+
   // -------------------------------------------------------------------------
   // loadChildrenAsync (used by tree mode)
   // -------------------------------------------------------------------------
