@@ -16,12 +16,14 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
@@ -46,6 +48,8 @@ public final class NewCalculationDialogController {
 
   // ── FXML-injected widgets ──────────────────────────────────────────────────
 
+  @FXML private @Nullable Label nameLabel;
+  @FXML private @Nullable TextField nameField;
   @FXML private @Nullable Label flowLabel;
   @FXML private @Nullable Label steadyLabel;
   @FXML private @Nullable Label turbLabel;
@@ -67,6 +71,7 @@ public final class NewCalculationDialogController {
 
   @FXML
   private void initialize() {
+    requireNameLabel().setText(I18n.get("newCal.calculationName"));
     requireFlowLabel().setText(I18n.get("newCal.flowType"));
     requireSteadyLabel().setText(I18n.get("newCal.steady"));
     requireTurbLabel().setText(I18n.get("newCal.turbulence"));
@@ -102,6 +107,28 @@ public final class NewCalculationDialogController {
    */
   public void setProjectPath(Path path) {
     this.projectPath = path;
+  }
+
+  /**
+   * Pre-fills the calculation-name text field with {@code name}. Must be called before the dialog
+   * is shown so the user sees a sensible default they can either accept or override.
+   */
+  public void setDefaultName(String name) {
+    requireNameField().setText(name);
+  }
+
+  /** Returns the trimmed calculation name currently entered by the user. */
+  public String getName() {
+    String text = requireNameField().getText();
+    return text == null ? "" : text.trim();
+  }
+
+  /**
+   * Observable text property of the calculation-name field. Exposed so callers can bind UI state
+   * (e.g. enable/disable the Create button when the name is blank).
+   */
+  public ReadOnlyStringProperty nameProperty() {
+    return requireNameField().textProperty();
   }
 
   /**
@@ -278,6 +305,18 @@ public final class NewCalculationDialogController {
   }
 
   // ── Null-guard accessors ───────────────────────────────────────────────────
+
+  private Label requireNameLabel() {
+    Label l = nameLabel;
+    if (l == null) throw new IllegalStateException("nameLabel not injected");
+    return l;
+  }
+
+  private TextField requireNameField() {
+    TextField f = nameField;
+    if (f == null) throw new IllegalStateException("nameField not injected");
+    return f;
+  }
 
   private Label requireFlowLabel() {
     Label l = flowLabel;

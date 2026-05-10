@@ -3,6 +3,7 @@ package affr.app.top;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -24,6 +25,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
@@ -51,6 +53,7 @@ final class TopControllerTest {
   private ListView<TopCategory> categoryList;
   private StackPane viewerPane;
   private Parent root;
+  private BorderPane rootPane;
 
   @Start
   @SuppressWarnings("unchecked")
@@ -81,6 +84,7 @@ final class TopControllerTest {
 
     categoryList = (ListView<TopCategory>) root.lookup("#categoryList");
     viewerPane = (StackPane) root.lookup("#viewerPane");
+    rootPane = (BorderPane) root;
 
     stage.setScene(new Scene(root, 800, 600));
     stage.show();
@@ -158,6 +162,105 @@ final class TopControllerTest {
     WaitForAsyncUtils.waitForFxEvents();
 
     assertTrue(called.get(), "setting action runnable should have been invoked");
+  }
+
+  // ── Workspace tab management ──────────────────────────────────────────────
+  //
+  // Tests for {@link TopController#openTab(String, Node, Runnable)},
+  // {@link TopController#closeTab(int)}, and {@link TopController#indexOfNode(Node)}.
+
+  @Test
+  void openTabAppendsTabAndShowsItsContent(FxRobot robot) {
+    Node tabContent = new Label("input-editor");
+    robot.interact(() -> controller.openTab("Calc1", tabContent, () -> {}));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertEquals(1, viewerPane.getChildren().size());
+    assertSame(
+        tabContent, viewerPane.getChildren().get(0), "viewerPane must show the new tab's content");
+  }
+
+  @Test
+  void openTabHidesCategoryList(FxRobot robot) {
+    robot.interact(() -> controller.openTab("Calc1", new Label("content"), () -> {}));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertNull(rootPane.getLeft(), "category list must be hidden when a secondary tab is active");
+  }
+
+  @Test
+  void closeTabReturnsToPrimaryTab(FxRobot robot) {
+    Node tabContent = new Label("input-editor");
+    robot.interact(() -> controller.openTab("Calc1", tabContent, () -> {}));
+    WaitForAsyncUtils.waitForFxEvents();
+    int idx = controller.indexOfNode(tabContent);
+
+    robot.interact(() -> controller.closeTab(idx));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertFalse(
+        viewerPane.getChildren().isEmpty(), "viewerPane should not be empty after closing tab");
+    assertFalse(
+        viewerPane.getChildren().get(0) == tabContent,
+        "closed tab's content must not remain in viewerPane");
+  }
+
+  @Test
+  void closeTabRestoresCategoryListOnPrimaryTab(FxRobot robot) {
+    robot.interact(() -> controller.openTab("Calc1", new Label("content"), () -> {}));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    robot.interact(() -> controller.closeTab(1));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertNotNull(
+        rootPane.getLeft(), "category list must be restored after returning to primary tab");
+  }
+
+  @Test
+  void closePrimaryTabIsNoOp(FxRobot robot) {
+    Node originalContent =
+        viewerPane.getChildren().isEmpty() ? null : viewerPane.getChildren().get(0);
+
+    robot.interact(() -> controller.closeTab(0));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    if (originalContent != null) {
+      assertSame(
+          originalContent,
+          viewerPane.getChildren().get(0),
+          "primary tab content must not change when closeTab(0) is called");
+    }
+  }
+
+  @Test
+  void indexOfNodeReturnsCorrectIndex(FxRobot robot) {
+    Node first = new Label("editor-1");
+    Node second = new Label("editor-2");
+    robot.interact(
+        () -> {
+          controller.openTab("Calc1", first, () -> {});
+          controller.openTab("Calc2", second, () -> {});
+        });
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertEquals(1, controller.indexOfNode(first));
+    assertEquals(2, controller.indexOfNode(second));
+    assertEquals(-1, controller.indexOfNode(new Label("unknown")));
+  }
+
+  @Test
+  void openMultipleTabsShowsCorrectContent(FxRobot robot) {
+    Node first = new Label("editor-1");
+    Node second = new Label("editor-2");
+    robot.interact(
+        () -> {
+          controller.openTab("Calc1", first, () -> {});
+          controller.openTab("Calc2", second, () -> {});
+        });
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertSame(second, viewerPane.getChildren().get(0), "last opened tab must be active");
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

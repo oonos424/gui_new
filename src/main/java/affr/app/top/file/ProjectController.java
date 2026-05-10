@@ -20,11 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import javafx.beans.binding.Bindings;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ContextMenu;
@@ -97,6 +100,18 @@ public final class ProjectController {
               }
             });
 
+    // ListView → ViewModel: double-click an item to open it (currently only AFFrCalculation;
+    // future ProjectItem types will be handled here as the sealed hierarchy grows).
+    requireItemList()
+        .setOnMouseClicked(
+            event -> {
+              if (event.getClickCount() != 2) return;
+              @Nullable ProjectItem sel = requireItemList().getSelectionModel().getSelectedItem();
+              if (sel instanceof AFFrCalculation cal) {
+                viewModel.requestOpenCalculation(cal);
+              }
+            });
+
     // ViewModel → ListView: programmatic focus change (e.g. restored from persistence
     // in the Input Editor phase)
     viewModel
@@ -125,6 +140,9 @@ public final class ProjectController {
 
   // ── Add calculation ────────────────────────────────────────────────────────
 
+  /** Combined result of the New Calculation dialog: the user-supplied name and chosen model. */
+  private record NewCalculationChoice(String name, AFFrCalculationModel model) {}
+
   @FXML
   private void onAddCalculation() {
     if (requireViewModel().getProject().isTutorial()) {
@@ -136,35 +154,32 @@ public final class ProjectController {
 
   /**
    * Add-calculation flow for regular (non-tutorial) projects: opens the full model-selection
-   * dialog, then creates the calculation with an auto-generated sequential name.
+   * dialog, then creates the calculation with a user-supplied name.
    */
   private void onAddRegularCalculation() {
-    Optional<@Nullable AFFrCalculationModel> modelChoice = showNewCalculationDialog();
-    if (modelChoice.isEmpty()) return;
-    @Nullable AFFrCalculationModel chosenModel = modelChoice.get();
-    if (chosenModel == null) return;
+    Optional<NewCalculationChoice> choice = showNewCalculationDialog();
+    if (choice.isEmpty()) return;
+    NewCalculationChoice chosen = choice.get();
 
     ProjectViewModel vm = requireViewModel();
     AFFrProject project = vm.getProject();
     Path projectPath = vm.getProjectPath();
     List<ProjectItem> snapshot = List.copyOf(vm.getProjectItems());
-    AFFrCalculationModel model = chosenModel;
+    AFFrCalculationModel model = chosen.model();
+    String name = chosen.name();
 
     Task<AFFrCalculation> task =
         new Task<>() {
           @Override
           protected AFFrCalculation call() throws Exception {
-            return ProjectWriter.createCalculation(projectPath, snapshot, project, model);
+            return ProjectWriter.createCalculation(projectPath, snapshot, project, model, name);
           }
         };
 
     task.setOnSucceeded(
         e -> {
           @Nullable AFFrCalculation cal = task.getValue();
-          if (cal != null) {
-            vm.addItem(cal);
-            requireItemList().getSelectionModel().select(cal);
-          }
+          if (cal != null) onCalculationCreated(cal);
         });
 
     task.setOnFailed(e -> showError(task.getException()));
@@ -229,11 +244,31 @@ public final class ProjectController {
   }
 
   /**
-   * Opens the New Calculation model-selection dialog and returns the user's choice.
+   * Called on the JavaFX Application Thread once a calculation has been successfully created on
+   * disk. Adds it to the ViewModel, selects it in the list, and asks the navigation layer to open
+   * the Input Editor for it.
    *
-   * @return the selected {@link AFFrCalculationModel}, or empty if the user cancelled
+   * <p>Package-private rather than private to be exercisable from tests without spinning up the
+   * full async {@link Task}.
    */
-  private Optional<@Nullable AFFrCalculationModel> showNewCalculationDialog() {
+  void onCalculationCreated(AFFrCalculation cal) {
+    ProjectViewModel vm = requireViewModel();
+    vm.addItem(cal);
+    requireItemList().getSelectionModel().select(cal);
+    // Auto-navigate to the Input Editor for the just-created calculation.
+    vm.requestOpenCalculation(cal);
+  }
+
+  /**
+   * Opens the New Calculation dialog and returns the user's choice.
+   *
+   * <p>Installs Create/Cancel buttons with i18n labels, seeds the calculation-name field with the
+   * next sequential default ({@code cal_NN}), and disables the Create button while the name is
+   * blank.
+   *
+   * @return the chosen name and model, or empty if the user cancelled
+   */
+  private Optional<NewCalculationChoice> showNewCalculationDialog() {
     try {
       @Nullable URL rawFxml = getClass().getResource("NewCalculationDialog.fxml");
       if (rawFxml == null) throw new IllegalStateException("NewCalculationDialog.fxml not found");
@@ -241,15 +276,42 @@ public final class ProjectController {
       DialogPane dialogPane = loader.load();
       NewCalculationDialogController ctrl = loader.getController();
       if (ctrl == null) throw new IllegalStateException("FXML controller not set");
-      ctrl.setProjectPath(requireViewModel().getProjectPath());
 
-      Dialog<AFFrCalculationModel> dialog = new Dialog<>();
+      ProjectViewModel vm = requireViewModel();
+      ctrl.setProjectPath(vm.getProjectPath());
+      ctrl.setDefaultName(ProjectWriter.nextCalName(vm.getProjectItems()));
+
+      ButtonType createButton =
+          new ButtonType(I18n.get("newCal.create"), ButtonBar.ButtonData.OK_DONE);
+      ButtonType cancelButton =
+          new ButtonType(I18n.get("newCal.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
+      dialogPane.getButtonTypes().setAll(createButton, cancelButton);
+
+      // Disable Create while the name is blank (whitespace-only counts as blank).
+      @Nullable Node rawCreateNode = dialogPane.lookupButton(createButton);
+      if (rawCreateNode == null) {
+        throw new IllegalStateException("Create button not found in dialog pane after setAll()");
+      }
+      Button createNode = (Button) rawCreateNode;
+      createNode
+          .disableProperty()
+          .bind(Bindings.createBooleanBinding(() -> ctrl.getName().isEmpty(), ctrl.nameProperty()));
+
+      Dialog<NewCalculationChoice> dialog = new Dialog<>();
       dialog.setTitle(I18n.get("newCal.dialog.title"));
       dialog.setDialogPane(dialogPane);
       dialog.initOwner(requireItemList().getScene().getWindow());
-      dialog.setResultConverter(bt -> bt == ButtonType.OK ? ctrl.buildResult() : null);
+      dialog.setResultConverter(
+          bt ->
+              bt == createButton
+                  ? new NewCalculationChoice(ctrl.getName(), ctrl.buildResult())
+                  : null);
 
-      return dialog.showAndWait();
+      // JavaFX wraps a null result-converter return as Optional.empty() rather than
+      // Optional.of(null), so the Optional content is always @NonNull when present.
+      @SuppressWarnings("nullness")
+      Optional<NewCalculationChoice> result = dialog.showAndWait();
+      return result;
     } catch (IOException e) {
       showError(e);
       return Optional.empty();

@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.ButtonType?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DialogPane?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <!--
   DialogPane for the New Calculation model-selection dialog.
 
+  Top   — calculation name text field (defaulted to the next cal_NN by the controller).
   Left  — required selections: flow type, steady/unsteady, turbulence approach.
   Right — optional add-on models (CheckBoxes added programmatically by the controller).
   Below — "Read from existing file…" button.
-  Buttons — OK / Cancel (standard DialogPane button types).
+  Buttons — Create / Cancel (installed programmatically with i18n labels by the caller).
 -->
 <DialogPane
     xmlns:fx="http://javafx.com/fxml"
@@ -24,16 +25,17 @@
     prefWidth="580.0"
     stylesheets="@new_calculation_dialog.css">
 
-  <buttonTypes>
-    <ButtonType fx:constant="OK"/>
-    <ButtonType fx:constant="CANCEL"/>
-  </buttonTypes>
-
   <content>
     <VBox spacing="16.0">
       <padding>
         <Insets top="4.0" right="4.0" bottom="4.0" left="4.0"/>
       </padding>
+
+      <!-- ── Calculation name ── -->
+      <VBox spacing="6.0">
+        <Label fx:id="nameLabel" styleClass="section-label"/>
+        <TextField fx:id="nameField" maxWidth="Infinity"/>
+      </VBox>
 
       <!-- ── Main row: required (left) + separator + optional (right) ── -->
       <HBox spacing="20.0">

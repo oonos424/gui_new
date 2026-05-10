@@ -1,5 +1,6 @@
 package affr.app;
 
+import affr.app.inputs.InputEditorController;
 import affr.app.top.TopController;
 import affr.app.top.file.FileBrowserController;
 import affr.app.top.file.ProjectController;
@@ -7,6 +8,7 @@ import affr.data.DataStore;
 import affr.fx.viewmodel.top.TopViewModel;
 import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.fx.viewmodel.top.file.ProjectViewModel;
+import affr.project.AFFrCalculation;
 import affr.project.AFFrProject;
 import affr.project.ProjectLoader;
 import affr.util.fx.FxScheduler;
@@ -175,6 +177,17 @@ public final class NavigationService {
     }
     controller.init(pvm);
 
+    // Subscribe to open-calculation requests from this project so double-clicks route
+    // into the Input Editor.
+    pvm.openCalculationRequestProperty()
+        .addListener(
+            (obs, old, calculation) -> {
+              if (calculation != null) {
+                showInputEditor(calculation);
+                pvm.clearOpenCalculationRequest();
+              }
+            });
+
     requireTopController().enterProjectMode(node);
     // Acknowledge the openedProject signal so the same project can be re-opened.
     // Clear both VMs: only one triggered the open, but clearing the other is a no-op.
@@ -200,6 +213,37 @@ public final class NavigationService {
       return installPath.resolve("tutorials");
     }
     return null;
+  }
+
+  /**
+   * Loads the Input Editor for the given calculation and opens it in a new workspace tab.
+   *
+   * <p>Navigation back is handled by the tab bar: the × button closes the tab and returns to the
+   * project's calculation list.
+   */
+  private void showInputEditor(AFFrCalculation calculation) {
+    URL fxml = requireResource(InputEditorController.class, "InputEditorController.fxml");
+    FXMLLoader loader = new FXMLLoader(fxml);
+    Node node;
+    try {
+      node = loader.load();
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to load InputEditorController.fxml", e);
+    }
+    if (node == null) {
+      throw new IllegalStateException(
+          "FXMLLoader returned null node for InputEditorController.fxml");
+    }
+    InputEditorController controller = loader.getController();
+    if (controller == null) {
+      throw new IllegalStateException("InputEditorController was not set by FXMLLoader");
+    }
+
+    TopController top = requireTopController();
+    Runnable closeThisTab = () -> top.closeTab(top.indexOfNode(node));
+    controller.init(calculation);
+
+    top.openTab(calculation.name(), node, closeThisTab);
   }
 
   private TopController requireTopController() {
