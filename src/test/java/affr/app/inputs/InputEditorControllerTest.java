@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -46,13 +45,12 @@ import org.testfx.util.WaitForAsyncUtils;
  *   <li>tab toggles are produced one-to-one with {@link InputTab#tabsFor(AFFrCalculationModel)}, in
  *       order;
  *   <li>the first tab is selected, exactly one tab is always selected, content swaps faithfully;
- *   <li>Back / Home buttons fire the wired callbacks;
- *   <li>locale changes refresh tab and header labels.
+ *   <li>locale changes refresh tab labels.
  * </ul>
  *
  * <p>Runs headlessly on Monocle — see {@code build.gradle.kts} {@code tasks.test}.
  *
- * <p>Each test re-loads the FXML from scratch via {@link #loadEditor(AFFrCalculation, Runnable,
+ * <p>Each test re-loads the FXML from scratch via {@link #loadEditor(FxRobot, AFFrCalculation)}.
  * Runnable)} so model-specific tab populations don't leak between tests.
  */
 @ExtendWith(ApplicationExtension.class)
@@ -76,7 +74,7 @@ final class InputEditorControllerTest {
 
   @Test
   void fxmlInjectsRequiredWidgets(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
+    Loaded loaded = loadEditor(robot, calculationWithDefaultModel());
 
     assertNotNull(loaded.tabButtonsBox(), "tabButtons must be injected by FXMLLoader");
     assertNotNull(loaded.tabContent(), "tabContent must be injected by FXMLLoader");
@@ -86,7 +84,7 @@ final class InputEditorControllerTest {
   void tabButtonsAreCreatedOneForEachVisibleTabInOrder(FxRobot robot) {
     AFFrCalculation cal = calculationWithDefaultModel();
 
-    Loaded loaded = loadEditor(robot, cal, () -> {}, () -> {});
+    Loaded loaded = loadEditor(robot, cal);
 
     assertEquals(
         InputTab.tabsFor(cal.getModel()),
@@ -104,7 +102,7 @@ final class InputEditorControllerTest {
   void tabsForCombustChemReactModelIncludeCombustionAndReaction(FxRobot robot) {
     AFFrCalculation cal = calculationWithExtras(ExtraModel.COMBUST_CHEM_REACT);
 
-    Loaded loaded = loadEditor(robot, cal, () -> {}, () -> {});
+    Loaded loaded = loadEditor(robot, cal);
 
     assertEquals(
         List.of(
@@ -123,7 +121,7 @@ final class InputEditorControllerTest {
 
   @Test
   void firstTabIsSelectedByDefaultAndItsPaneIsInTabContent(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
+    Loaded loaded = loadEditor(robot, calculationWithDefaultModel());
 
     Map<InputTab, ToggleButton> buttons = loaded.controller().tabButtonsByInputTab();
     ToggleButton first = buttons.values().iterator().next();
@@ -133,7 +131,7 @@ final class InputEditorControllerTest {
 
   @Test
   void selectingDifferentTabSwapsContent(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
+    Loaded loaded = loadEditor(robot, calculationWithDefaultModel());
     Map<InputTab, ToggleButton> buttons = loaded.controller().tabButtonsByInputTab();
     List<ToggleButton> ordered = List.copyOf(buttons.values());
     ToggleButton first = ordered.get(0);
@@ -153,7 +151,7 @@ final class InputEditorControllerTest {
    */
   @Test
   void clickingActiveTabKeepsItSelected(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
+    Loaded loaded = loadEditor(robot, calculationWithDefaultModel());
     ToggleButton first = loaded.controller().tabButtonsByInputTab().values().iterator().next();
 
     robot.interact(() -> first.setSelected(false)); // simulate click on the active tab
@@ -163,72 +161,26 @@ final class InputEditorControllerTest {
     assertEquals(1, loaded.tabContent().getChildren().size(), "tabContent must still have a child");
   }
 
-  // ── Back / Home callbacks ────────────────────────────────────────────────
-
-  @Test
-  void backButtonInvokesOnBackCallback(FxRobot robot) {
-    AtomicInteger backCalls = new AtomicInteger();
-    AtomicInteger homeCalls = new AtomicInteger();
-    Loaded loaded =
-        loadEditor(
-            robot,
-            calculationWithDefaultModel(),
-            backCalls::incrementAndGet,
-            homeCalls::incrementAndGet);
-
-    robot.interact(
-        () -> ((javafx.scene.control.Button) loaded.scene().lookup("#backButton")).fire());
-    WaitForAsyncUtils.waitForFxEvents();
-
-    assertEquals(1, backCalls.get(), "Back must invoke onBack exactly once");
-    assertEquals(0, homeCalls.get(), "Home must not be invoked by Back");
-  }
-
-  @Test
-  void homeButtonInvokesOnHomeCallback(FxRobot robot) {
-    AtomicInteger backCalls = new AtomicInteger();
-    AtomicInteger homeCalls = new AtomicInteger();
-    Loaded loaded =
-        loadEditor(
-            robot,
-            calculationWithDefaultModel(),
-            backCalls::incrementAndGet,
-            homeCalls::incrementAndGet);
-
-    robot.interact(
-        () -> ((javafx.scene.control.Button) loaded.scene().lookup("#homeButton")).fire());
-    WaitForAsyncUtils.waitForFxEvents();
-
-    assertEquals(0, backCalls.get(), "Back must not be invoked by Home");
-    assertEquals(1, homeCalls.get(), "Home must invoke onHome exactly once");
-  }
-
   // ── Locale change ────────────────────────────────────────────────────────
 
   /**
-   * Locale change must re-resolve tab labels and header button labels via {@link I18n}. The exact
-   * Japanese strings are pinned by {@code messages_ja.properties} and asserted in {@link
+   * Locale change must re-resolve tab labels via {@link I18n}. The exact Japanese strings are
+   * pinned by {@code messages_ja.properties} and asserted in {@link
    * affr.fx.viewmodel.inputs.InputTabI18nTest}; here we only need to prove that the controller's
    * locale-change listener actually fires.
    */
   @Test
-  void localeChangeRefreshesTabAndHeaderLabels(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
+  void localeChangeRefreshesTabLabels(FxRobot robot) {
+    Loaded loaded = loadEditor(robot, calculationWithDefaultModel());
     ToggleButton meshButton = loaded.controller().tabButtonsByInputTab().get(InputTab.MESH);
     assertNotNull(meshButton, "MESH tab button must exist for the default model");
     String englishMeshText = meshButton.getText();
-    String englishBackText =
-        ((javafx.scene.control.Button) loaded.scene().lookup("#backButton")).getText();
 
     robot.interact(() -> I18n.setLocale(Locale.JAPANESE));
     WaitForAsyncUtils.waitForFxEvents();
 
     assertNotEquals(
         englishMeshText, meshButton.getText(), "tab label must change after locale change");
-    assertNotEquals(
-        englishBackText,
-        ((javafx.scene.control.Button) loaded.scene().lookup("#backButton")).getText(),
-        "header button label must change after locale change");
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -240,7 +192,7 @@ final class InputEditorControllerTest {
       VBox tabButtonsBox,
       StackPane tabContent) {}
 
-  private Loaded loadEditor(FxRobot robot, AFFrCalculation cal, Runnable onBack, Runnable onHome) {
+  private Loaded loadEditor(FxRobot robot, AFFrCalculation cal) {
     AtomicReference<Loaded> ref = new AtomicReference<>();
     robot.interact(
         () -> {
@@ -252,7 +204,7 @@ final class InputEditorControllerTest {
             FXMLLoader loader = new FXMLLoader(fxml);
             Parent root = loader.load();
             InputEditorController controller = loader.getController();
-            controller.init(cal, onBack, onHome);
+            controller.init(cal);
 
             Scene scene = new Scene(root, 1200, 800);
             stage.setScene(scene);

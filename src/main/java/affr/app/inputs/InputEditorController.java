@@ -61,10 +61,6 @@ public final class InputEditorController {
   @FXML private @Nullable StackPane viewerPane;
   @FXML private @Nullable Label viewerPlaceholder;
 
-  // Header — left
-  @FXML private @Nullable Button backButton;
-  @FXML private @Nullable Button homeButton;
-
   // Header — right (action buttons; placeholders, no actions wired in this phase)
   @FXML private @Nullable Button changeSettingsButton;
   @FXML private @Nullable Button runButton;
@@ -75,8 +71,6 @@ public final class InputEditorController {
   // ── State (set by init()) ─────────────────────────────────────────────────
 
   private @Nullable AFFrCalculation calculation;
-  private @Nullable Runnable onBack;
-  private @Nullable Runnable onHome;
 
   /** Group ensuring exactly one tab toggle is selected at a time. */
   private final ToggleGroup tabGroup = new ToggleGroup();
@@ -99,20 +93,16 @@ public final class InputEditorController {
   // ── Public API ────────────────────────────────────────────────────────────
 
   /**
-   * Wires the editor to a specific calculation and to navigation callbacks.
+   * Wires the editor to a specific calculation.
+   *
+   * <p>Navigation back to the calculation list or project browser is handled by the workspace tab
+   * bar (× button closes the tab). This method no longer accepts navigation callbacks.
    *
    * @param calculation the calculation being edited; its {@link AFFrCalculationModel} drives which
    *     tabs are shown
-   * @param onBack invoked when the user clicks the Back button — return to the Calculation List
-   * @param onHome invoked when the user clicks the Home button — return to the Project Browser
    */
-  public void init(AFFrCalculation calculation, Runnable onBack, Runnable onHome) {
+  public void init(AFFrCalculation calculation) {
     this.calculation = calculation;
-    this.onBack = onBack;
-    this.onHome = onHome;
-
-    requireBackButton().setOnAction(e -> onBack.run());
-    requireHomeButton().setOnAction(e -> onHome.run());
 
     populateTabs(calculation.getModel());
 
@@ -204,8 +194,6 @@ public final class InputEditorController {
   // ── Locale-driven label refresh for header buttons ────────────────────────
 
   private void applyLabels() {
-    requireBackButton().setText(I18n.get("inputEditor.header.back"));
-    requireHomeButton().setText(I18n.get("inputEditor.header.home"));
     requireChangeSettingsButton().setText(I18n.get("inputEditor.header.changeSettings"));
     requireRunButton().setText(I18n.get("inputEditor.header.run"));
     requireSaveButton().setText(I18n.get("inputEditor.header.save"));
@@ -225,18 +213,6 @@ public final class InputEditorController {
     StackPane s = tabContent;
     if (s == null) throw new IllegalStateException("tabContent not injected");
     return s;
-  }
-
-  private Button requireBackButton() {
-    Button b = backButton;
-    if (b == null) throw new IllegalStateException("backButton not injected");
-    return b;
-  }
-
-  private Button requireHomeButton() {
-    Button b = homeButton;
-    if (b == null) throw new IllegalStateException("homeButton not injected");
-    return b;
   }
 
   private Button requireChangeSettingsButton() {

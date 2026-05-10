@@ -218,9 +218,8 @@ public final class NavigationService {
   /**
    * Loads the Input Editor for the given calculation and opens it in a new workspace tab.
    *
-   * <p>Back (inside the editor) closes the tab and returns to the project's calculation list (the
-   * primary tab remains in project mode). Home closes the tab and also exits project mode,
-   * returning the primary tab to the Project Browser.
+   * <p>Navigation back is handled by the tab bar: the × button closes the tab and returns to the
+   * project's calculation list.
    */
   private void showInputEditor(AFFrCalculation calculation) {
     URL fxml = requireResource(InputEditorController.class, "InputEditorController.fxml");
@@ -242,13 +241,7 @@ public final class NavigationService {
 
     TopController top = requireTopController();
     Runnable closeThisTab = () -> top.closeTab(top.indexOfNode(node));
-    controller.init(
-        calculation,
-        closeThisTab, // Back = close tab only
-        () -> {
-          closeThisTab.run();
-          top.exitProjectMode();
-        }); // Home = close tab + exit project
+    controller.init(calculation);
 
     top.openTab(calculation.name(), node, closeThisTab);
   }

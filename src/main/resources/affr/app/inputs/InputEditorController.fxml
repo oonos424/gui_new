@@ -13,7 +13,7 @@
 <!--
   Input Editor shell.
 
-    HEADER (top, 50 px) — Back/Home on the left, action buttons on the right.
+    HEADER (top, 50 px) — action buttons on the right.
     SplitPane (HORIZONTAL, divider ~600 px):
       MANAGER (left)   — TabPane with side=LEFT, vertical 30 x 110 tabs; populated at runtime.
       VIEWER  (right)  — placeholder area; the 3D mesh viewer will live here in a later phase.
@@ -27,17 +27,6 @@
   <!-- ── HEADER (top, 50 px) ─────────────────────────────────────────── -->
   <top>
     <BorderPane prefHeight="50.0" styleClass="input-editor-header">
-
-      <!-- Back / Home navigation -->
-      <left>
-        <HBox spacing="4.0" alignment="CENTER_LEFT">
-          <BorderPane.margin>
-            <Insets left="8.0"/>
-          </BorderPane.margin>
-          <Button fx:id="backButton" styleClass="input-editor-nav-button"/>
-          <Button fx:id="homeButton" styleClass="input-editor-nav-button"/>
-        </HBox>
-      </left>
 
       <!-- Action buttons (placeholders — wired in a later phase) -->
       <right>
