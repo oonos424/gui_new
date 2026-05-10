@@ -123,9 +123,12 @@ dependencies {
   implementation("net.objecthunter:exp4j:0.4.6")
   implementation("com.google.code.gson:gson:2.8.6")
   implementation("com.zaxxer:nuprocess:3.0.0")
+  implementation("org.slf4j:slf4j-api:2.0.17")
+  implementation("org.slf4j:jul-to-slf4j:2.0.17")
   // NOTE: SSH library — check for security updates at each release
   // https://mvnrepository.com/artifact/com.github.mwiede/jsch
   implementation("com.github.mwiede:jsch:2.28.0")
+  runtimeOnly("ch.qos.logback:logback-classic:1.5.32")
 
   // Checker Framework — compile-time null safety
   annotationProcessor("org.checkerframework:checker:3.51.0")
