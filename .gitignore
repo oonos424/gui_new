@@ -49,8 +49,6 @@ coverage.xml
 # macOS
 .DS_Store
 
-# Claude Code
-.claude/
-
-# Agent instructions (local only)
-Agent.md
+# Claude Code (local-only files)
+.claude/settings.local.json
+.claude/.DS_Store

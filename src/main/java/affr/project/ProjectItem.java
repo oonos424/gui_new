@@ -14,7 +14,7 @@ import java.nio.file.Path;
  *   <li>A new {@code case} in every {@code switch(item)} — the compiler enforces this.
  * </ol>
  */
-public sealed interface ProjectItem permits CalculationItem {
+public sealed interface ProjectItem permits AFFrCalculation {
 
   /** Display name (e.g. {@code "cal_01"}). */
   String name();

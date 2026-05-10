@@ -54,7 +54,7 @@
           <padding>
             <Insets top="8.0" right="12.0" bottom="12.0" left="12.0"/>
           </padding>
-          <Button fx:id="addItemButton" text="+" styleClass="add-item-button"/>
+          <Button fx:id="addItemButton" onAction="#onAddCalculation" styleClass="add-item-button"/>
         </HBox>
       </bottom>
 

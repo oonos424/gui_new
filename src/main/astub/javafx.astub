@@ -1,3 +1,4 @@
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 
@@ -7,7 +8,8 @@ import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 // application code regardless.
 package javafx.fxml;
 class FXMLLoader {
-    <T> T load() throws java.io.IOException;
+    // load() always returns a non-null root node when the FXML has a root element.
+    <T> @NonNull T load() throws java.io.IOException;
     <T> @Nullable T getController();
 }
 
@@ -30,6 +32,10 @@ package javafx.scene.control;
 class Labeled {
     final void setText(@UnknownInitialization Labeled this, @Nullable String value);
     final void setGraphic(@UnknownInitialization Labeled this, @Nullable javafx.scene.Node value);
+}
+class Control {
+    // setContextMenu accepts null to clear the context menu (JavaFX spec).
+    void setContextMenu(@Nullable ContextMenu value);
 }
 class Cell<T> {
     final boolean isSelected(@UnknownInitialization Cell<T> this);

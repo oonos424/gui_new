@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(chmod +x:*)",
+      "Bash(find:*)",
+      "Bash(java -version)",
+      "Bash(cs java-home:*)",
+      "Bash(/usr/libexec/java_home -V)",
+      "Bash(brew list:*)",
+      "Bash(cs java:*)",
+      "Bash(brew search:*)",
+      "Bash(brew tap:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git *)"
+    ]
+  }
+}

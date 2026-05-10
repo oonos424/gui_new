@@ -1,6 +1,7 @@
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.jvm.toolchain.JavaToolchainService
 
 plugins {
   application
@@ -95,8 +96,10 @@ tasks.processResources { dependsOn(copyMonacoIntoResources) }
 val jvmTarget = "25"
 // NOTE: Update when Kotlin adds JVM 25 target support; JVM 24 bytecode runs on JVM 25 without issue
 val kotlinJvmTarget = "24"
+val jvmTargetVersion = jvmTarget.toInt()
 
 java {
+  toolchain { languageVersion = JavaLanguageVersion.of(jvmTargetVersion) }
   sourceCompatibility = JavaVersion.toVersion(jvmTarget)
   targetCompatibility = JavaVersion.toVersion(jvmTarget)
 }
@@ -120,9 +123,12 @@ dependencies {
   implementation("net.objecthunter:exp4j:0.4.6")
   implementation("com.google.code.gson:gson:2.8.6")
   implementation("com.zaxxer:nuprocess:3.0.0")
+  implementation("org.slf4j:slf4j-api:2.0.17")
+  implementation("org.slf4j:jul-to-slf4j:2.0.17")
   // NOTE: SSH library — check for security updates at each release
   // https://mvnrepository.com/artifact/com.github.mwiede/jsch
   implementation("com.github.mwiede:jsch:2.28.0")
+  runtimeOnly("ch.qos.logback:logback-classic:1.5.32")
 
   // Checker Framework — compile-time null safety
   annotationProcessor("org.checkerframework:checker:3.51.0")
@@ -166,8 +172,12 @@ val copyMonacoIntoResources by
 //
 // Defaults are set at configuration time (config-cache compatible).
 // Override with: ./gradlew run --args="--profile=production --tutorial-dir /other/path"
+val javaToolchainService = extensions.getByType<JavaToolchainService>()
+val toolchainLauncher =
+    javaToolchainService.launcherFor { languageVersion = JavaLanguageVersion.of(jvmTargetVersion) }
 
 tasks.withType<JavaExec>().configureEach {
+  javaLauncher.set(toolchainLauncher)
   standardOutput = System.out
   errorOutput = System.out
 }
