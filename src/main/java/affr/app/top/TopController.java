@@ -296,16 +296,15 @@ public final class TopController {
       }
     }
 
-    String savedPathStr = savedPrefs.browserPath();
-    if (savedPathStr != null) {
+    Path savedPath = savedPrefs.browserPath();
+    if (savedPath != null) {
       try {
-        Path savedPath = Path.of(savedPathStr);
         Path rootPath = requireDataStore().getRootPath();
         if (savedPath.startsWith(rootPath) && Files.isDirectory(savedPath)) {
           vm.setCurrentPath(savedPath);
         }
       } catch (Exception ignored) {
-        // Malformed path or IO error — keep the default root path.
+        // IO error — keep the default root path.
       }
     }
   }
@@ -331,7 +330,7 @@ public final class TopController {
             (obs, old, path) -> {
               UserPreferences p = prefs;
               if (p != null) {
-                p.setBrowserPath(path.toString());
+                p.setBrowserPath(path);
                 p.save();
               }
             });
@@ -355,7 +354,7 @@ public final class TopController {
         .textProperty()
         .bind(
             Bindings.createStringBinding(
-                () -> formatBreadcrumb(vm.getCurrentPath(), ds.getRootPath()),
+                () -> PathFormatting.breadcrumb(vm.getCurrentPath(), ds.getRootPath()),
                 vm.currentPathProperty()));
 
     // Up button action
@@ -365,14 +364,6 @@ public final class TopController {
     requireHeaderNavUpButton()
         .disableProperty()
         .bind(Bindings.createBooleanBinding(vm::isAtRoot, vm.currentPathProperty()));
-  }
-
-  /** Formats a path as {@code ~/.affr} or {@code ~/.affr/relative/sub/path}. */
-  private static String formatBreadcrumb(Path current, Path root) {
-    if (current.equals(root)) {
-      return "~/.affr";
-    }
-    return "~/.affr/" + root.relativize(current);
   }
 
   private static URL requireResource(Class<?> owner, String resourceName) {

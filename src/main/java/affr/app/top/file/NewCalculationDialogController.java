@@ -1,5 +1,6 @@
 package affr.app.top.file;
 
+import affr.app.PathFx;
 import affr.project.AFFrCalculationModel;
 import affr.project.ComprsModel;
 import affr.project.CtlReader;
@@ -10,7 +11,6 @@ import affr.project.SteadyModel;
 import affr.project.TurbModel;
 import affr.util.i18n.I18n;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -140,19 +140,19 @@ public final class NewCalculationDialogController {
     @Nullable Path proj = projectPath;
     if (proj != null) {
       ProjectUiState uiState = ProjectUiState.load(proj);
-      @Nullable Path lastDir = uiState.getCtlLastDir();
-      File startDir =
-          (lastDir != null && Files.isDirectory(lastDir)) ? lastDir.toFile() : proj.toFile();
-      chooser.setInitialDirectory(startDir);
+      @Nullable File startDir = PathFx.toExistingDir(uiState.getCtlLastDir());
+      chooser.setInitialDirectory(startDir != null ? startDir : PathFx.toFile(proj));
     }
 
     @Nullable File file =
         chooser.showOpenDialog(requireReadFromFileButton().getScene().getWindow());
     if (file == null) return;
 
+    Path chosenPath = PathFx.fromChooser(file);
+
     // Persist the chosen directory back to the per-project UI state (fast properties-file write).
     if (proj != null) {
-      Path chosenDir = file.toPath().getParent();
+      Path chosenDir = chosenPath.getParent();
       if (chosenDir != null) {
         ProjectUiState uiState = ProjectUiState.load(proj);
         uiState.setCtlLastDir(chosenDir);
@@ -163,7 +163,7 @@ public final class NewCalculationDialogController {
     // Parse the .ctl file off the JavaFX Application Thread.
     Button btn = requireReadFromFileButton();
     btn.setDisable(true);
-    Path ctlPath = file.toPath();
+    Path ctlPath = chosenPath;
 
     javafx.concurrent.Task<AFFrCalculationModel> task =
         new javafx.concurrent.Task<>() {
