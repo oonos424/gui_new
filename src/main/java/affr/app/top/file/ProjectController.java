@@ -23,6 +23,7 @@ import javafx.beans.binding.Bindings;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -218,7 +219,11 @@ public final class ProjectController {
       dialogPane.getButtonTypes().setAll(createButton, cancelButton);
 
       // Disable Create while the name is blank (whitespace-only counts as blank).
-      Button createNode = (Button) dialogPane.lookupButton(createButton);
+      @Nullable Node rawCreateNode = dialogPane.lookupButton(createButton);
+      if (rawCreateNode == null) {
+        throw new IllegalStateException("Create button not found in dialog pane after setAll()");
+      }
+      Button createNode = (Button) rawCreateNode;
       createNode
           .disableProperty()
           .bind(Bindings.createBooleanBinding(() -> ctrl.getName().isEmpty(), ctrl.nameProperty()));
@@ -233,7 +238,11 @@ public final class ProjectController {
                   ? new NewCalculationChoice(ctrl.getName(), ctrl.buildResult())
                   : null);
 
-      return dialog.showAndWait();
+      // JavaFX wraps a null result-converter return as Optional.empty() rather than
+      // Optional.of(null), so the Optional content is always @NonNull when present.
+      @SuppressWarnings("nullness")
+      Optional<NewCalculationChoice> result = dialog.showAndWait();
+      return result;
     } catch (IOException e) {
       showError(e);
       return Optional.empty();
