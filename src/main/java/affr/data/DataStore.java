@@ -28,8 +28,25 @@ public final class DataStore {
 
   private final Path rootPath;
 
+  /**
+   * When {@code true}, every child directory is treated as a {@link ProjectEntry} regardless of
+   * whether it contains a {@value #PROJECT_MARKER} marker file. Used for the tutorial inventory,
+   * where directories are installed by the AFFr installer and carry no GUI marker.
+   */
+  private final boolean treatAllDirsAsProjects;
+
   public DataStore(Path rootPath) {
+    this(rootPath, false);
+  }
+
+  /**
+   * @param rootPath root of the browseable tree
+   * @param treatAllDirsAsProjects when {@code true} every child directory is a project; when {@code
+   *     false} only directories containing {@value #PROJECT_MARKER} are projects
+   */
+  public DataStore(Path rootPath, boolean treatAllDirsAsProjects) {
     this.rootPath = rootPath;
+    this.treatAllDirsAsProjects = treatAllDirsAsProjects;
   }
 
   /** The fixed workspace root — the browser cannot navigate above this path. */
@@ -93,6 +110,9 @@ public final class DataStore {
   private BrowserEntry toBrowserEntry(Path path) {
     Path fn = path.getFileName();
     String name = fn != null ? fn.toString() : path.toString();
+    if (treatAllDirsAsProjects) {
+      return new ProjectEntry(path, name, "");
+    }
     Path marker = path.resolve(PROJECT_MARKER);
     if (Files.exists(marker)) {
       return new ProjectEntry(path, name, readMemo(marker));

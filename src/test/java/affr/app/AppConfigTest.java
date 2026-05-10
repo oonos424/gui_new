@@ -2,11 +2,9 @@ package affr.app;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import affr.app.AppConfig.Profile;
-import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +21,6 @@ final class AppConfigTest {
     AppConfig cfg = AppConfig.parse(List.of());
 
     assertEquals(Profile.RELEASE, cfg.profile());
-    assertNull(cfg.tutorialDir());
     assertFalse(cfg.isDebug());
   }
 
@@ -60,25 +57,10 @@ final class AppConfigTest {
   }
 
   @Test
-  void tutorialDirEqualsForm() {
-    AppConfig cfg = AppConfig.parse(List.of("--tutorial-dir=/tmp/tutorials"));
-
-    assertEquals(Path.of("/tmp/tutorials"), cfg.tutorialDir());
-  }
-
-  @Test
-  void tutorialDirSpaceSeparatedForm() {
-    AppConfig cfg = AppConfig.parse(List.of("--tutorial-dir", "/var/data/tutorials"));
-
-    assertEquals(Path.of("/var/data/tutorials"), cfg.tutorialDir());
-  }
-
-  @Test
   void unrecognisedArgumentsAreSilentlyIgnored() {
     AppConfig cfg = AppConfig.parse(List.of("--unknown", "value", "--profile=debug"));
 
     assertEquals(Profile.DEBUG, cfg.profile());
-    assertNull(cfg.tutorialDir());
   }
 
   @Test
@@ -91,10 +73,9 @@ final class AppConfigTest {
 
   @Test
   void multipleFlagsCombine() {
-    AppConfig cfg = AppConfig.parse(List.of("--profile=debug", "--tutorial-dir", "/opt/tut"));
+    AppConfig cfg = AppConfig.parse(List.of("--profile=debug", "--unknown-flag", "foo"));
 
     assertEquals(Profile.DEBUG, cfg.profile());
-    assertEquals(Path.of("/opt/tut"), cfg.tutorialDir());
     assertTrue(cfg.isDebug());
   }
 

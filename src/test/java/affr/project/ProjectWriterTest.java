@@ -208,6 +208,135 @@ final class ProjectWriterTest {
     assertEquals(AFFrCalculationModel.DEFAULT, cal.getModel());
   }
 
+  // ── createCalculation(named) ──────────────────────────────────────────────
+
+  @Test
+  void createNamedCalculationMakesDirectoryWithSuppliedName(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    ProjectWriter.createCalculation(
+        proj, "my_run", List.of(), project, AFFrCalculationModel.DEFAULT);
+
+    assertTrue(Files.isDirectory(proj.resolve("my_run")));
+  }
+
+  @Test
+  void createNamedCalculationReturnsCalculationWithCorrectName(@TempDir Path root)
+      throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    AFFrCalculation cal =
+        ProjectWriter.createCalculation(
+            proj, "my_run", List.of(), project, AFFrCalculationModel.DEFAULT);
+
+    assertEquals("my_run", cal.name());
+  }
+
+  @Test
+  void createNamedCalculationWritesCalPropertyAndModeFiles(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    ProjectWriter.createCalculation(
+        proj, "my_run", List.of(), project, AFFrCalculationModel.DEFAULT);
+
+    assertTrue(Files.exists(proj.resolve("my_run").resolve(".affr_property")));
+    assertTrue(Files.exists(proj.resolve("my_run").resolve(".mode")));
+  }
+
+  @Test
+  void createNamedCalculationSetsProjectBackReference(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    AFFrCalculation cal =
+        ProjectWriter.createCalculation(
+            proj, "my_run", List.of(), project, AFFrCalculationModel.DEFAULT);
+
+    assertEquals(project, cal.getProject());
+  }
+
+  @Test
+  void createNamedCalculationStoresSuppliedModel(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+    AFFrCalculationModel model =
+        new AFFrCalculationModel(
+            ComprsModel.COMPRESSIBLE, SteadyModel.UNSTEADY, TurbModel.LES, Set.of());
+
+    AFFrCalculation cal =
+        ProjectWriter.createCalculation(proj, "my_run", List.of(), project, model);
+
+    assertEquals(model, cal.getModel());
+  }
+
+  @Test
+  void createNamedCalculationThrowsForBlankName(@TempDir Path root) {
+    Path proj = root.resolve("proj");
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    assertThrows(
+        IOException.class,
+        () ->
+            ProjectWriter.createCalculation(
+                proj, "   ", List.of(), project, AFFrCalculationModel.DEFAULT));
+  }
+
+  @Test
+  void createNamedCalculationThrowsForEmptyName(@TempDir Path root) {
+    Path proj = root.resolve("proj");
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    assertThrows(
+        IOException.class,
+        () ->
+            ProjectWriter.createCalculation(
+                proj, "", List.of(), project, AFFrCalculationModel.DEFAULT));
+  }
+
+  @Test
+  void createNamedCalculationThrowsOnCaseInsensitiveCollision(@TempDir Path root)
+      throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+    AFFrCalculation existing = ProjectWriter.createCalculation(proj, List.of(), project);
+
+    assertThrows(
+        IOException.class,
+        () ->
+            ProjectWriter.createCalculation(
+                proj, "CAL_01", List.of(existing), project, AFFrCalculationModel.DEFAULT));
+  }
+
+  @Test
+  void createNamedCalculationThrowsIfDirectoryAlreadyExists(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Files.createDirectory(proj.resolve("existing_dir")); // pre-existing dir not in items list
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    assertThrows(
+        IOException.class,
+        () ->
+            ProjectWriter.createCalculation(
+                proj, "existing_dir", List.of(), project, AFFrCalculationModel.DEFAULT));
+  }
+
+  @Test
+  void createNamedCalculationTrimsLeadingAndTrailingWhitespace(@TempDir Path root)
+      throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    AFFrCalculation cal =
+        ProjectWriter.createCalculation(
+            proj, "  my_run  ", List.of(), project, AFFrCalculationModel.DEFAULT);
+
+    assertEquals("my_run", cal.name());
+    assertTrue(Files.isDirectory(proj.resolve("my_run")));
+  }
+
   // ── renameCalculation ────────────────────────────────────────────────────
 
   @Test

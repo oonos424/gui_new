@@ -13,6 +13,7 @@ import affr.util.fx.FxScheduler;
 import affr.util.prefs.UserPreferences;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Path;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
@@ -44,6 +45,7 @@ public final class NavigationService {
   // Set when showProjectBrowser() runs; cleared on hide.
   private @Nullable TopController topController;
   private @Nullable FileBrowserViewModel fileBrowserViewModel;
+  private @Nullable FileBrowserViewModel tutorialBrowserViewModel;
 
   public NavigationService(Stage stage, AppConfig config, UserPreferences prefs) {
     this.stage = stage;
@@ -65,6 +67,18 @@ public final class NavigationService {
 
     Node fileBrowserNode = loadFileBrowser(fbVm);
 
+    // ── Tutorial browser ─────────────────────────────────────────────────
+    Path resolvedTutorialDir = resolveTutorialDir();
+    FileBrowserViewModel tutorialFbVm = null;
+    Node tutorialBrowserNode = null;
+    if (resolvedTutorialDir != null) {
+      DataStore tutorialStore = new DataStore(resolvedTutorialDir, true);
+      tutorialFbVm = new FileBrowserViewModel(tutorialStore, projectLoader, scheduler);
+      tutorialFbVm.setReadOnlyRoot(true);
+      tutorialFbVm.setTutorialMirrorRoot(UserPreferences.APP_DIR.resolve(".tutorials"));
+      tutorialBrowserNode = loadFileBrowser(tutorialFbVm);
+    }
+
     URL fxml = requireResource(TopController.class, "TopController.fxml");
     FXMLLoader loader = new FXMLLoader(fxml);
     Parent root = loader.load();
@@ -75,11 +89,12 @@ public final class NavigationService {
     if (controller == null) {
       throw new IllegalStateException("TopController was not set by FXMLLoader");
     }
-    controller.init(topVm, fbVm, fileBrowserNode);
+    controller.init(topVm, fbVm, fileBrowserNode, tutorialFbVm, tutorialBrowserNode);
     controller.setOnSettingAction(() -> SettingsDialog.show(stage, prefs));
 
     this.topController = controller;
     this.fileBrowserViewModel = fbVm;
+    this.tutorialBrowserViewModel = tutorialFbVm;
 
     // Subscribe to project loads completed by FileBrowserViewModel and route to project screen.
     fbVm.openedProjectProperty()
@@ -89,6 +104,18 @@ public final class NavigationService {
                 showProject(project);
               }
             });
+
+    // Subscribe to project loads from the tutorial browser as well.
+    if (tutorialFbVm != null) {
+      tutorialFbVm
+          .openedProjectProperty()
+          .addListener(
+              (obs, old, project) -> {
+                if (project != null) {
+                  showProject(project);
+                }
+              });
+    }
 
     Scene scene = new Scene(root, prefs.windowWidth(), prefs.windowHeight());
     stage.setTitle("AFFr");
@@ -150,8 +177,29 @@ public final class NavigationService {
 
     requireTopController().enterProjectMode(node);
     // Acknowledge the openedProject signal so the same project can be re-opened.
+    // Clear both VMs: only one triggered the open, but clearing the other is a no-op.
     requireFileBrowserViewModel().clearOpenedProject();
     requireFileBrowserViewModel().setOpeningProject(null);
+    FileBrowserViewModel tutVm = tutorialBrowserViewModel;
+    if (tutVm != null) {
+      tutVm.clearOpenedProject();
+      tutVm.setOpeningProject(null);
+    }
+  }
+
+  /**
+   * Resolves the tutorial inventory directory from user preferences: returns {@code
+   * guiInstallPath().resolve("tutorials")} when the GUI installation path is configured, or {@code
+   * null} when it is not.
+   *
+   * <p>The returned path may or may not exist on disk; callers must check.
+   */
+  private @Nullable Path resolveTutorialDir() {
+    Path installPath = prefs.guiInstallPath();
+    if (installPath != null) {
+      return installPath.resolve("tutorials");
+    }
+    return null;
   }
 
   private TopController requireTopController() {

@@ -10,11 +10,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BiConsumer;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -72,6 +74,15 @@ public final class FileBrowserViewModel {
   // Presentation-only: which layout mode is active (LIST, ICON, …)
   private final ObjectProperty<FileBrowserViewMode> viewMode =
       new SimpleObjectProperty<>(FileBrowserViewMode.LIST);
+
+  // When true, the root of this browser is read-only: CRUD operations (new project, etc.) should
+  // be hidden or disabled. Used for the Tutorials category.
+  private final BooleanProperty readOnlyRoot = new SimpleBooleanProperty(false);
+
+  // For tutorial browsers: the writable root under which per-case mirror directories live.
+  // Each opened tutorial project gets a mirror at tutorialMirrorRoot/<caseName>/.
+  // Null for the regular file browser.
+  private @Nullable Path tutorialMirrorRoot;
 
   /**
    * Creates a ViewModel backed by {@code dataStore} and {@code projectLoader}, dispatching async
@@ -248,6 +259,36 @@ public final class FileBrowserViewModel {
     viewMode.set(mode);
   }
 
+  // ── Read-only root ────────────────────────────────────────────────────────
+
+  /**
+   * When {@code true}, the root of this browser is read-only: CRUD operations (new project, rename,
+   * delete) at the root level should be hidden or disabled. Used for the Tutorials category, where
+   * the bundled tutorial inventory must not be modified by the user.
+   */
+  public BooleanProperty readOnlyRootProperty() {
+    return readOnlyRoot;
+  }
+
+  public boolean isReadOnlyRoot() {
+    return readOnlyRoot.get();
+  }
+
+  public void setReadOnlyRoot(boolean value) {
+    readOnlyRoot.set(value);
+  }
+
+  // ── Tutorial mirror root ──────────────────────────────────────────────────
+
+  /**
+   * Sets the writable root directory used for tutorial case mirror areas. When non-null and {@link
+   * #isReadOnlyRoot()} is {@code true}, each opened tutorial project will have its writable mirror
+   * at {@code tutorialMirrorRoot/<caseName>}.
+   */
+  public void setTutorialMirrorRoot(@Nullable Path tutorialMirrorRoot) {
+    this.tutorialMirrorRoot = tutorialMirrorRoot;
+  }
+
   // ── Navigation helpers ────────────────────────────────────────────────────
 
   /** {@code true} when the browser is already at the workspace root. */
@@ -378,10 +419,14 @@ public final class FileBrowserViewModel {
    */
   public void openProject(ProjectEntry entry) {
     Path projectPath = entry.path();
+    boolean isTutorial = isReadOnlyRoot();
+    @Nullable Path mirrorRoot = tutorialMirrorRoot;
+    @Nullable Path mirrorPath =
+        (isTutorial && mirrorRoot != null) ? mirrorRoot.resolve(entry.name()) : null;
     runIo(
         () -> {
           try {
-            AFFrProject project = projectLoader.load(projectPath);
+            AFFrProject project = projectLoader.load(projectPath, isTutorial, mirrorPath);
             scheduler.runUi(() -> openedProject.set(project));
           } catch (IOException | RuntimeException e) {
             scheduler.runUi(
