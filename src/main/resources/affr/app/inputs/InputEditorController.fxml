@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+  Input Editor shell.
+
+    HEADER (top, 50 px) — Back/Home on the left, action buttons + Menu on the right.
+    SplitPane (HORIZONTAL, divider ~600 px):
+      MANAGER (left)   — TabPane with side=LEFT, vertical 30 x 110 tabs; populated at runtime.
+      VIEWER  (right)  — placeholder area; the 3D mesh viewer will live here in a later phase.
+-->
+<BorderPane
+    fx:id="rootPane"
+    xmlns:fx="http://javafx.com/fxml"
+    fx:controller="affr.app.inputs.InputEditorController"
+    stylesheets="@inputs.css">
+
+  <!-- ── HEADER (top, 50 px) ─────────────────────────────────────────── -->
+  <top>
+    <BorderPane prefHeight="50.0" styleClass="input-editor-header">
+
+      <!-- Back / Home navigation -->
+      <left>
+        <HBox spacing="4.0" alignment="CENTER_LEFT">
+          <BorderPane.margin>
+            <Insets left="8.0"/>
+          </BorderPane.margin>
+          <Button fx:id="backButton" styleClass="input-editor-nav-button"/>
+          <Button fx:id="homeButton" styleClass="input-editor-nav-button"/>
+        </HBox>
+      </left>
+
+      <!-- Action buttons (placeholders — wired in a later phase) -->
+      <right>
+        <HBox alignment="CENTER_RIGHT" spacing="4.0">
+          <BorderPane.margin>
+            <Insets right="8.0"/>
+          </BorderPane.margin>
+          <Button fx:id="changeSettingsButton" styleClass="input-editor-action-button"/>
+          <Separator orientation="VERTICAL"/>
+          <Button fx:id="runButton" styleClass="input-editor-action-button"/>
+          <Separator orientation="VERTICAL"/>
+          <Button fx:id="saveButton" styleClass="input-editor-action-button"/>
+          <Separator orientation="VERTICAL"/>
+          <Button fx:id="editSubroutineButton" styleClass="input-editor-action-button"/>
+          <Separator orientation="VERTICAL"/>
+          <Button fx:id="confirmSettingsButton" styleClass="input-editor-action-button"/>
+          <Separator orientation="VERTICAL"/>
+          <MenuButton fx:id="menuButton" styleClass="input-editor-menu-button"/>
+        </HBox>
+      </right>
+
+    </BorderPane>
+  </top>
+
+  <!-- ── SplitPane (MANAGER + VIEWER) ────────────────────────────────── -->
+  <center>
+    <SplitPane fx:id="splitPane" orientation="HORIZONTAL" dividerPositions="0.42">
+
+      <!--
+        MANAGER (left) — a column of "tab" toggle buttons on the very left,
+        with the active tab's form content to the right of them.
+
+        Implemented as VBox + StackPane (rather than TabPane) because TabPane
+        with side="LEFT" rotates the label text via TabPaneSkin (-90° applied
+        in Java code, not from CSS, so it cannot be overridden via CSS). The
+        VBox + StackPane combination gives horizontal labels and full visual
+        control.
+      -->
+      <HBox fx:id="manager" minWidth="400.0" minHeight="600.0"
+            styleClass="input-editor-manager">
+        <VBox fx:id="tabButtons" styleClass="input-editor-tab-bar"/>
+        <StackPane fx:id="tabContent" HBox.hgrow="ALWAYS"
+                   styleClass="input-editor-tab-content"/>
+      </HBox>
+
+      <!-- VIEWER (right) — placeholder until the mesh-viewer phase. -->
+      <StackPane fx:id="viewerPane" styleClass="input-editor-viewer">
+        <Label fx:id="viewerPlaceholder"
+               styleClass="input-editor-viewer-placeholder"
+               text=""/>
+      </StackPane>
+
+    </SplitPane>
+  </center>
+
+</BorderPane>

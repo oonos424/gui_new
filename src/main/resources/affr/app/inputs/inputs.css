@@ -1,0 +1,91 @@
+/* Input Editor shell styles. Per-tab content brings its own stylesheets. */
+
+.input-editor-header {
+    -fx-background-color: #f4f6f9;
+    -fx-border-color: transparent transparent #d0d4da transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.input-editor-nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #224466;
+    -fx-font-weight: bold;
+    -fx-padding: 4 10 4 10;
+}
+
+.input-editor-nav-button:hover {
+    -fx-background-color: #eaf4ff;
+}
+
+.input-editor-action-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #333333;
+    -fx-padding: 4 10 4 10;
+}
+
+.input-editor-action-button:hover {
+    -fx-background-color: #eaf4ff;
+}
+
+.input-editor-menu-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #333333;
+}
+
+.input-editor-manager {
+    -fx-background-color: #ffffff;
+}
+
+/*
+ * Tab strip on the left of the MANAGER.
+ *
+ * Each "tab" is a ToggleButton stacked vertically in a VBox. They are styled
+ * to look like a column of horizontal-text tabs: uniform width, no gap, the
+ * selected tab gets a clear highlight and a lighter border on the right
+ * (visually merging with the content area).
+ */
+.input-editor-tab-bar {
+    -fx-background-color: #f4f6f9;
+    -fx-pref-width: 110px;
+    -fx-min-width: 110px;
+    -fx-border-color: transparent #d0d4da transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.input-editor-tab-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #333333;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 12 10 14;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent transparent #e2e5ea transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cursor: hand;
+}
+
+.input-editor-tab-button:hover {
+    -fx-background-color: #eaf4ff;
+}
+
+.input-editor-tab-button:selected {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #224466;
+    -fx-font-weight: bold;
+}
+
+.input-editor-tab-content {
+    -fx-background-color: #ffffff;
+}
+
+.input-editor-tab-pane {
+    -fx-background-color: transparent;
+}
+
+.input-editor-viewer {
+    -fx-background-color: #fafbfc;
+}
+
+.input-editor-viewer-placeholder {
+    -fx-font-size: 14;
+    -fx-text-fill: #888888;
+}

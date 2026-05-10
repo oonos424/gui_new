@@ -1,5 +1,6 @@
 package affr.fx.viewmodel.top.file;
 
+import affr.project.AFFrCalculation;
 import affr.project.AFFrProject;
 import affr.project.ProjectItem;
 import java.nio.file.Path;
@@ -37,6 +38,10 @@ public final class ProjectViewModel {
 
   // Transient: not persisted in this phase.
   private final ObjectProperty<@Nullable ProjectItem> focusedItem =
+      new SimpleObjectProperty<>(null);
+
+  // Transient: drives navigation into the Input Editor when set, then cleared by the listener.
+  private final ObjectProperty<@Nullable AFFrCalculation> openCalculationRequest =
       new SimpleObjectProperty<>(null);
 
   /**
@@ -144,5 +149,27 @@ public final class ProjectViewModel {
   /** Sets the focused item. Pass {@code null} to clear the selection. */
   public void setFocusedItem(@Nullable ProjectItem item) {
     focusedItem.set(item);
+  }
+
+  // ── Open-calculation request ─────────────────────────────────────────────
+
+  /**
+   * One-shot signal: the View layer sets this property to an {@link AFFrCalculation} when the user
+   * asks to open it (e.g. by double-clicking the item list). The navigation layer subscribes to
+   * this property, opens the Input Editor, and then calls {@link #clearOpenCalculationRequest()} to
+   * acknowledge the signal — allowing the same calculation to be re-opened later.
+   */
+  public ObjectProperty<@Nullable AFFrCalculation> openCalculationRequestProperty() {
+    return openCalculationRequest;
+  }
+
+  /** Asks the navigation layer to open {@code calculation} in the Input Editor. */
+  public void requestOpenCalculation(AFFrCalculation calculation) {
+    openCalculationRequest.set(calculation);
+  }
+
+  /** Acknowledges the most recent open-calculation request. */
+  public void clearOpenCalculationRequest() {
+    openCalculationRequest.set(null);
   }
 }

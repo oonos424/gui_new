@@ -65,6 +65,12 @@ public final class TopController {
   private @Nullable FileBrowserViewModel fileBrowserViewModel;
   private @Nullable Node fileBrowserNode;
 
+  // Currently active project view (set in enterProjectMode). Restored when the Input Editor closes.
+  private @Nullable Node projectNode;
+
+  // Saved BorderPane.top while the Input Editor's own header is on screen. Restored on exit.
+  private @Nullable Node savedTopNode;
+
   // -------------------------------------------------------------------------
   // FXML lifecycle — rendering rules only, no data
   // -------------------------------------------------------------------------
@@ -174,6 +180,7 @@ public final class TopController {
    */
   @SuppressWarnings("nullness") // BorderPane.setLeft(null) is the JavaFX API to clear the region
   public void enterProjectMode(Node projectNode) {
+    this.projectNode = projectNode;
     requireRootPane().setLeft(null);
     requireHeaderNav().setVisible(false);
     requireHeaderBackNav().setVisible(true);
@@ -181,6 +188,42 @@ public final class TopController {
     requireAppTitleLabel().setVisible(false);
     requireAppTitleLabel().setManaged(false);
     requireViewerPane().getChildren().setAll(projectNode);
+  }
+
+  /**
+   * Swaps the viewer area to the Input Editor and removes the shell's own top header from layout —
+   * the Input Editor brings its own complete header bar (Back / Home / action buttons / Menu), so
+   * keeping the shell's header on screen would double up the navigation and Menu button.
+   *
+   * <p>The top region is removed via {@link BorderPane#setTop(Node)} (rather than just being hidden
+   * via {@code setManaged(false)}) so the BorderPane's top slot fully collapses to zero height. The
+   * removed node is saved and restored verbatim by {@link #exitInputEditorMode()}.
+   *
+   * <p>Called by {@link affr.app.NavigationService} when the user opens a calculation.
+   */
+  @SuppressWarnings("nullness") // BorderPane.setTop(null) is the JavaFX API to clear the region
+  public void enterInputEditorMode(Node inputEditorNode) {
+    BorderPane root = requireRootPane();
+    if (savedTopNode == null) {
+      savedTopNode = root.getTop();
+      root.setTop(null);
+    }
+    requireViewerPane().getChildren().setAll(inputEditorNode);
+  }
+
+  /**
+   * Restores the shell's top header and the project view in the viewer area. No-op if {@link
+   * #enterProjectMode(Node)} was never called.
+   */
+  public void exitInputEditorMode() {
+    Node project = projectNode;
+    if (project == null) return;
+    Node top = savedTopNode;
+    if (top != null) {
+      requireRootPane().setTop(top);
+      savedTopNode = null;
+    }
+    requireViewerPane().getChildren().setAll(project);
   }
 
   /**
@@ -192,6 +235,7 @@ public final class TopController {
    * affr.app.NavigationService} when project mode is exited programmatically.
    */
   public void exitProjectMode() {
+    this.projectNode = null;
     requireRootPane().setLeft(requireCategoryList());
     requireHeaderBackNav().setVisible(false);
     requireHeaderBackNav().setManaged(false);

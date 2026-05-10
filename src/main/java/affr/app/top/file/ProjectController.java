@@ -96,6 +96,18 @@ public final class ProjectController {
               }
             });
 
+    // ListView → ViewModel: double-click an item to open it (currently only AFFrCalculation;
+    // future ProjectItem types will be handled here as the sealed hierarchy grows).
+    requireItemList()
+        .setOnMouseClicked(
+            event -> {
+              if (event.getClickCount() != 2) return;
+              @Nullable ProjectItem sel = requireItemList().getSelectionModel().getSelectedItem();
+              if (sel instanceof AFFrCalculation cal) {
+                viewModel.requestOpenCalculation(cal);
+              }
+            });
+
     // ViewModel → ListView: programmatic focus change (e.g. restored from persistence
     // in the Input Editor phase)
     viewModel
