@@ -9,10 +9,12 @@ import affr.project.AFFrCalProperty;
 import affr.project.AFFrCalculation;
 import affr.project.AFFrCalculationModel;
 import affr.project.AFFrProject;
+import affr.project.CalculationStatus;
 import affr.project.ProjectItem;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.collections.ListChangeListener;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,23 @@ final class ProjectViewModelTest {
   private static AFFrCalculation makeCal(String name) {
     return new AFFrCalculation(
         name, PROJ_PATH.resolve(name), null, AFFrCalProperty.DEFAULT, AFFrCalculationModel.DEFAULT);
+  }
+
+  private static AFFrCalculation makeCal(String name, String date) {
+    AFFrCalProperty property =
+        new AFFrCalProperty(
+            CalculationStatus.SETTING,
+            date,
+            0,
+            "localhost",
+            "",
+            "未設定",
+            1,
+            false,
+            Map.of(),
+            Map.of());
+    return new AFFrCalculation(
+        name, PROJ_PATH.resolve(name), null, property, AFFrCalculationModel.DEFAULT);
   }
 
   private static ProjectViewModel vm(AFFrCalculation... items) {
@@ -211,5 +230,72 @@ final class ProjectViewModelTest {
     viewModel.setFocusedItem(null);
 
     assertEquals(2, calls.get());
+  }
+
+  /**
+   * Two ViewModels over the same project must track focus independently. This is the whole reason
+   * focusedItem moved out of {@link AFFrProject} into {@link ProjectViewModel}.
+   */
+  @Test
+  void focusIsIndependentBetweenTwoViewModelsOverTheSameProject() {
+    AFFrCalculation itemA = makeCal("cal_01");
+    AFFrCalculation itemB = makeCal("cal_02");
+    AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of(itemA, itemB));
+
+    ProjectViewModel vm1 = new ProjectViewModel(p);
+    ProjectViewModel vm2 = new ProjectViewModel(p);
+
+    vm1.setFocusedItem(itemA);
+    vm2.setFocusedItem(itemB);
+
+    assertSame(itemA, vm1.getFocusedItem());
+    assertSame(itemB, vm2.getFocusedItem());
+  }
+
+  // ── Sort order ────────────────────────────────────────────────────────────
+
+  @Test
+  void defaultSortOrderIsDateDesc() {
+    ProjectViewModel viewModel = vm();
+
+    assertSame(ProjectSortOrder.DATE_DESC, viewModel.getSortOrder());
+  }
+
+  @Test
+  void itemsAreSortedByDefaultSortOrderInitially() {
+    AFFrCalculation a = makeCal("a", "2026-01-01");
+    AFFrCalculation b = makeCal("b", "2026-05-01");
+    ProjectViewModel viewModel = vm(a, b);
+
+    // DATE_DESC: newer first
+    assertEquals(List.of(b, a), List.copyOf(viewModel.getSortedItems()));
+  }
+
+  @Test
+  void changingSortOrderResortsItemsLive() {
+    AFFrCalculation a = makeCal("a", "2026-01-01");
+    AFFrCalculation b = makeCal("b", "2026-05-01");
+    ProjectViewModel viewModel = vm(a, b);
+
+    viewModel.setSortOrder(ProjectSortOrder.NAME_ASC);
+
+    assertEquals(List.of(a, b), List.copyOf(viewModel.getSortedItems()));
+  }
+
+  // ── Project pass-through ──────────────────────────────────────────────────
+
+  @Test
+  void projectNameIsExposed() {
+    ProjectViewModel viewModel = vm();
+
+    assertEquals("p", viewModel.getProjectName());
+  }
+
+  @Test
+  void projectMemoIsExposed() {
+    AFFrProject p = new AFFrProject("p", PROJ_PATH, "memo text", List.of());
+    ProjectViewModel viewModel = new ProjectViewModel(p);
+
+    assertEquals("memo text", viewModel.getProjectMemo());
   }
 }
