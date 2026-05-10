@@ -1,0 +1,14 @@
+/* ── New Calculation dialog styles ──────────────────────────────────────── */
+
+.section-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #444444;
+}
+
+.read-file-button {
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 3;
+}

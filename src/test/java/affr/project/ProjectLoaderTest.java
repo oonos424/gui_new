@@ -2,6 +2,7 @@ package affr.project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -15,13 +16,14 @@ import org.junit.jupiter.api.io.TempDir;
  * Unit tests for {@link ProjectLoader}.
  *
  * <p>All tests use a JUnit {@link TempDir} for full isolation; they never touch the real {@code
- * ~/.affr/} workspace. The {@code .affr_property} JSON written by each test mirrors the format that
- * the application itself writes, exercising the full round-trip.
+ * ~/.affr/} workspace. The JSON written by each test mirrors the format that the application itself
+ * writes, exercising the full round-trip.
  */
 final class ProjectLoaderTest {
 
   private static final String PROJECT_MARKER = ".affr_project";
   private static final String CAL_PROPERTY = ".affr_property";
+  private static final String CAL_MODE = ".mode";
 
   // ── Project-level fields ──────────────────────────────────────────────────
 
@@ -68,7 +70,6 @@ final class ProjectLoaderTest {
   @Test
   void emptyOrAbsentMarkerYieldsEmptyMemo(@TempDir Path root) throws IOException {
     Path proj = Files.createDirectory(root.resolve("proj"));
-    // No marker file written — ProjectLoader reads it defensively.
 
     AFFrProject project = new ProjectLoader().load(proj);
 
@@ -88,7 +89,7 @@ final class ProjectLoaderTest {
   }
 
   @Test
-  void subdirWithCalPropertyBecomeCalculationItem(@TempDir Path root) throws IOException {
+  void subdirWithCalPropertyBecomesAFFrCalculation(@TempDir Path root) throws IOException {
     Path proj = Files.createDirectory(root.resolve("proj"));
     Files.createFile(proj.resolve(PROJECT_MARKER));
     Path cal = Files.createDirectory(proj.resolve("cal_01"));
@@ -97,7 +98,7 @@ final class ProjectLoaderTest {
     AFFrProject project = new ProjectLoader().load(proj);
 
     assertEquals(1, project.getItems().size());
-    assertInstanceOf(CalculationItem.class, project.getItems().get(0));
+    assertInstanceOf(AFFrCalculation.class, project.getItems().get(0));
     assertEquals("cal_01", project.getItems().get(0).name());
   }
 
@@ -105,7 +106,7 @@ final class ProjectLoaderTest {
   void subdirWithoutCalPropertyIsIgnored(@TempDir Path root) throws IOException {
     Path proj = Files.createDirectory(root.resolve("proj"));
     Files.createFile(proj.resolve(PROJECT_MARKER));
-    Files.createDirectory(proj.resolve("not_a_cal")); // no .affr_property
+    Files.createDirectory(proj.resolve("not_a_cal"));
 
     AFFrProject project = new ProjectLoader().load(proj);
 
@@ -129,7 +130,22 @@ final class ProjectLoaderTest {
     assertEquals("cal_03", items.get(2).name());
   }
 
-  // ── Status parsing ────────────────────────────────────────────────────────
+  // ── Back-reference ────────────────────────────────────────────────────────
+
+  @Test
+  void calculationHasBackReferenceToProject(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+
+    AFFrProject project = new ProjectLoader().load(proj);
+    AFFrCalculation c = (AFFrCalculation) project.getItems().get(0);
+
+    assertNotNull(c.getProject());
+    assertEquals(project, c.getProject());
+  }
+
+  // ── AFFrCalProperty fields ─────────────────────────────────────────────────
 
   @Test
   void statusIsReadFromCalProperty(@TempDir Path root) throws IOException {
@@ -138,9 +154,9 @@ final class ProjectLoaderTest {
     Files.writeString(
         cal.resolve(CAL_PROPERTY), "{\"status\":\"CALCULATED\",\"date\":\"2026-05-01\"}");
 
-    CalculationItem item = (CalculationItem) new ProjectLoader().load(proj).getItems().get(0);
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
-    assertEquals(CalculationStatus.CALCULATED, item.status());
+    assertEquals(CalculationStatus.CALCULATED, c.getStatus());
   }
 
   @Test
@@ -149,9 +165,9 @@ final class ProjectLoaderTest {
     Path cal = Files.createDirectory(proj.resolve("cal_01"));
     Files.writeString(cal.resolve(CAL_PROPERTY), "{\"status\":\"UNKNOWN_FUTURE_STATE\"}");
 
-    CalculationItem item = (CalculationItem) new ProjectLoader().load(proj).getItems().get(0);
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
-    assertEquals(CalculationStatus.SETTING, item.status());
+    assertEquals(CalculationStatus.SETTING, c.getStatus());
   }
 
   @Test
@@ -160,9 +176,9 @@ final class ProjectLoaderTest {
     Path cal = Files.createDirectory(proj.resolve("cal_01"));
     Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
 
-    CalculationItem item = (CalculationItem) new ProjectLoader().load(proj).getItems().get(0);
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
-    assertEquals(CalculationStatus.SETTING, item.status());
+    assertEquals(CalculationStatus.SETTING, c.getStatus());
   }
 
   @Test
@@ -171,13 +187,11 @@ final class ProjectLoaderTest {
     Path cal = Files.createDirectory(proj.resolve("cal_01"));
     Files.writeString(cal.resolve(CAL_PROPERTY), "NOT JSON");
 
-    CalculationItem item = (CalculationItem) new ProjectLoader().load(proj).getItems().get(0);
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
-    assertEquals(CalculationStatus.SETTING, item.status());
-    assertEquals("", item.date());
+    assertEquals(CalculationStatus.SETTING, c.getStatus());
+    assertEquals("", c.date());
   }
-
-  // ── Date field ────────────────────────────────────────────────────────────
 
   @Test
   void dateIsReadFromCalProperty(@TempDir Path root) throws IOException {
@@ -185,9 +199,9 @@ final class ProjectLoaderTest {
     Path cal = Files.createDirectory(proj.resolve("cal_01"));
     Files.writeString(cal.resolve(CAL_PROPERTY), "{\"date\":\"2026-04-15\"}");
 
-    CalculationItem item = (CalculationItem) new ProjectLoader().load(proj).getItems().get(0);
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
-    assertEquals("2026-04-15", item.date());
+    assertEquals("2026-04-15", c.date());
   }
 
   @Test
@@ -196,8 +210,105 @@ final class ProjectLoaderTest {
     Path cal = Files.createDirectory(proj.resolve("cal_01"));
     Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
 
-    CalculationItem item = (CalculationItem) new ProjectLoader().load(proj).getItems().get(0);
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
 
-    assertEquals("", item.date());
+    assertEquals("", c.date());
+  }
+
+  @Test
+  void ncpuIsReadFromCalProperty(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{\"ncpu\":4}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals(4, c.getProperty().ncpu());
+  }
+
+  @Test
+  void hostIsReadFromCalProperty(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{\"host\":\"hpc-server\"}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals("hpc-server", c.getProperty().host());
+  }
+
+  // ── AFFrCalculationModel (.mode) ──────────────────────────────────────────
+
+  @Test
+  void absentModeFileYieldsDefaultModel(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals(AFFrCalculationModel.DEFAULT, c.getModel());
+  }
+
+  @Test
+  void comprsModelIsReadFromModeFile(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+    Files.writeString(cal.resolve(CAL_MODE), "{\"comprsModel\":\"COMPRESSIBLE\"}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals(ComprsModel.COMPRESSIBLE, c.getModel().comprsModel());
+  }
+
+  @Test
+  void steadyModelIsReadFromModeFile(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+    Files.writeString(cal.resolve(CAL_MODE), "{\"steadyModel\":\"UNSTEADY\"}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals(SteadyModel.UNSTEADY, c.getModel().steadyModel());
+  }
+
+  @Test
+  void turbModelIsReadFromModeFile(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+    Files.writeString(cal.resolve(CAL_MODE), "{\"turbModel\":\"LES\"}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals(TurbModel.LES, c.getModel().turbModel());
+  }
+
+  @Test
+  void extraModelsAreReadFromModeFile(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+    Files.writeString(cal.resolve(CAL_MODE), "{\"extraModelSet\":[\"VOF\",\"CAVITATION\"]}");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertTrue(c.getModel().extraModelSet().contains(ExtraModel.VOF));
+    assertTrue(c.getModel().extraModelSet().contains(ExtraModel.CAVITATION));
+    assertEquals(2, c.getModel().extraModelSet().size());
+  }
+
+  @Test
+  void malformedModeFileFallsBackToDefaultModel(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Path cal = Files.createDirectory(proj.resolve("cal_01"));
+    Files.writeString(cal.resolve(CAL_PROPERTY), "{}");
+    Files.writeString(cal.resolve(CAL_MODE), "NOT JSON");
+
+    AFFrCalculation c = (AFFrCalculation) new ProjectLoader().load(proj).getItems().get(0);
+
+    assertEquals(AFFrCalculationModel.DEFAULT, c.getModel());
   }
 }
