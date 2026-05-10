@@ -3,6 +3,7 @@ package affr.app.top;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import affr.app.top.file.FileBrowserController;
@@ -22,6 +23,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,7 @@ final class TopControllerTest {
   private TopController controller;
   private ListView<TopCategory> categoryList;
   private StackPane viewerPane;
+  private BorderPane rootPane;
 
   @Start
   @SuppressWarnings("unchecked")
@@ -78,6 +81,7 @@ final class TopControllerTest {
 
     categoryList = (ListView<TopCategory>) root.lookup("#categoryList");
     viewerPane = (StackPane) root.lookup("#viewerPane");
+    rootPane = (BorderPane) root;
 
     stage.setScene(new Scene(root, 800, 600));
     stage.show();
@@ -140,6 +144,81 @@ final class TopControllerTest {
       assertSame(c, categoryList.getSelectionModel().getSelectedItem());
       assertViewerRendered(c, viewerPane);
     }
+  }
+
+  // ── Input Editor mode swap ────────────────────────────────────────────────
+  //
+  // {@link TopController#enterInputEditorMode(Node)} and {@link
+  // TopController#exitInputEditorMode()} together form the layout-swap contract used by
+  // NavigationService when the user opens a calculation.
+
+  @Test
+  void enterInputEditorModeRemovesTopAndSwapsViewer(FxRobot robot) {
+    Node projectNode = new Label("project-view");
+    Node editorNode = new Label("editor-view");
+    robot.interact(() -> controller.enterProjectMode(projectNode));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    robot.interact(() -> controller.enterInputEditorMode(editorNode));
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertNull(rootPane.getTop(), "shell header must be removed in Input Editor mode");
+    assertEquals(1, viewerPane.getChildren().size());
+    assertSame(editorNode, viewerPane.getChildren().get(0));
+  }
+
+  @Test
+  void exitInputEditorModeRestoresOriginalTopAndProjectViewer(FxRobot robot) {
+    Node projectNode = new Label("project-view");
+    Node editorNode = new Label("editor-view");
+    robot.interact(() -> controller.enterProjectMode(projectNode));
+    WaitForAsyncUtils.waitForFxEvents();
+    Node originalTop = rootPane.getTop();
+    assertNotNull(originalTop, "shell header must exist before entering Input Editor mode");
+
+    robot.interact(() -> controller.enterInputEditorMode(editorNode));
+    WaitForAsyncUtils.waitForFxEvents();
+    robot.interact(() -> controller.exitInputEditorMode());
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertSame(originalTop, rootPane.getTop(), "shell header must be restored on exit");
+    assertEquals(1, viewerPane.getChildren().size());
+    assertSame(projectNode, viewerPane.getChildren().get(0));
+  }
+
+  /**
+   * Regression for the {@code if (savedTopNode == null)} guard in {@link
+   * TopController#enterInputEditorMode(Node)}: a second enter must not overwrite the previously
+   * saved header with the (now-null) top region, otherwise exit would leave the header permanently
+   * empty.
+   */
+  @Test
+  void inputEditorDoubleEnterDoesNotLoseSavedTop(FxRobot robot) {
+    Node projectNode = new Label("project-view");
+    Node firstEditor = new Label("editor-1");
+    Node secondEditor = new Label("editor-2");
+    robot.interact(() -> controller.enterProjectMode(projectNode));
+    WaitForAsyncUtils.waitForFxEvents();
+    Node originalTop = rootPane.getTop();
+
+    robot.interact(() -> controller.enterInputEditorMode(firstEditor));
+    WaitForAsyncUtils.waitForFxEvents();
+    robot.interact(() -> controller.enterInputEditorMode(secondEditor));
+    WaitForAsyncUtils.waitForFxEvents();
+    robot.interact(() -> controller.exitInputEditorMode());
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertSame(originalTop, rootPane.getTop(), "double-enter must not lose the saved top node");
+  }
+
+  @Test
+  void exitInputEditorModeWithoutEnterIsNoOp(FxRobot robot) {
+    Node originalTop = rootPane.getTop();
+
+    robot.interact(() -> controller.exitInputEditorMode());
+    WaitForAsyncUtils.waitForFxEvents();
+
+    assertSame(originalTop, rootPane.getTop(), "exit must not mutate top when never entered");
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
