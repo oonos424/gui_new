@@ -1,11 +1,11 @@
 package affr.app.top;
 
+import affr.app.LanguageMenu;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
 import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.util.i18n.I18n;
 import java.nio.file.Path;
-import java.util.Locale;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -154,17 +154,14 @@ public final class TopController {
     wireHeaderNav(fileBrowserViewModel);
 
     // ── Language menu ────────────────────────────────────────────────
-    syncLanguageMenu(I18n.getLocale());
-    requireLangEnItem().setOnAction(e -> I18n.setLocale(Locale.ENGLISH));
-    requireLangJaItem().setOnAction(e -> I18n.setLocale(Locale.JAPANESE));
+    LanguageMenu.install(requireLangEnItem(), requireLangJaItem());
 
-    // ── Refresh widgets and language radio when locale changes ───────
+    // ── Refresh widgets when the locale changes ──────────────────────
     I18n.bundleProperty()
         .addListener(
             (obs, old, bundle) -> {
               requireCategoryList().refresh();
               renderViewer(requireViewModel().getSelectedCategory());
-              syncLanguageMenu(I18n.getLocale());
             });
 
     // ── Back / Home navigation ───────────────────────────────────────
@@ -300,12 +297,6 @@ public final class TopController {
     requireHeaderNavUpButton()
         .disableProperty()
         .bind(Bindings.createBooleanBinding(vm::isAtRoot, vm.currentPathProperty()));
-  }
-
-  private void syncLanguageMenu(Locale locale) {
-    boolean isJa = Locale.JAPANESE.getLanguage().equals(locale.getLanguage());
-    requireLangJaItem().setSelected(isJa);
-    requireLangEnItem().setSelected(!isJa);
   }
 
   // ── Null-guard helpers ────────────────────────────────────────────────────
