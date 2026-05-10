@@ -208,6 +208,83 @@ final class ProjectWriterTest {
     assertEquals(AFFrCalculationModel.DEFAULT, cal.getModel());
   }
 
+  // ── createCalculation(model, name) ────────────────────────────────────────
+
+  @Test
+  void createCalculationWithExplicitNameUsesThatName(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    AFFrCalculation cal =
+        ProjectWriter.createCalculation(
+            proj, List.of(), project, AFFrCalculationModel.DEFAULT, "my_first_run");
+
+    assertEquals("my_first_run", cal.name());
+    assertTrue(Files.isDirectory(proj.resolve("my_first_run")));
+  }
+
+  @Test
+  void createCalculationWithExplicitNameTrimsWhitespace(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    AFFrCalculation cal =
+        ProjectWriter.createCalculation(
+            proj, List.of(), project, AFFrCalculationModel.DEFAULT, "  trimmed  ");
+
+    assertEquals("trimmed", cal.name());
+    assertTrue(Files.isDirectory(proj.resolve("trimmed")));
+  }
+
+  @Test
+  void createCalculationWithBlankNameThrows(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+
+    assertThrows(
+        IOException.class,
+        () ->
+            ProjectWriter.createCalculation(
+                proj, List.of(), project, AFFrCalculationModel.DEFAULT, "   "));
+  }
+
+  @Test
+  void createCalculationWithCollidingNameThrowsAndDoesNotCreateDirectory(@TempDir Path root)
+      throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+    AFFrCalculation existing =
+        ProjectWriter.createCalculation(
+            proj, List.of(), project, AFFrCalculationModel.DEFAULT, "run_a");
+
+    assertThrows(
+        IOException.class,
+        () ->
+            ProjectWriter.createCalculation(
+                proj,
+                List.of(existing),
+                project,
+                AFFrCalculationModel.DEFAULT,
+                "RUN_A")); // case-insensitive collision
+  }
+
+  @Test
+  void createCalculationWithExplicitNameWritesModelToDisk(@TempDir Path root) throws IOException {
+    Path proj = Files.createDirectory(root.resolve("proj"));
+    Files.createFile(proj.resolve(".affr_project"));
+    AFFrProject project = new AFFrProject("proj", proj, "", List.of());
+    AFFrCalculationModel model =
+        new AFFrCalculationModel(
+            ComprsModel.INCOMPRESSIBLE, SteadyModel.UNSTEADY, TurbModel.LES, Set.of());
+
+    ProjectWriter.createCalculation(proj, List.of(), project, model, "named_run");
+    AFFrProject loaded = new ProjectLoader().load(proj);
+    AFFrCalculation cal = (AFFrCalculation) loaded.getItems().get(0);
+
+    assertEquals("named_run", cal.name());
+    assertEquals(model, cal.getModel());
+  }
+
   // ── renameCalculation ────────────────────────────────────────────────────
 
   @Test
