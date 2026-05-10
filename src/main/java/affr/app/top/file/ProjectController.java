@@ -1,5 +1,6 @@
 package affr.app.top.file;
 
+import affr.app.PathFx;
 import affr.fx.viewmodel.top.file.ProjectSortOrder;
 import affr.fx.viewmodel.top.file.ProjectViewModel;
 import affr.project.AFFrCalculation;
@@ -10,7 +11,6 @@ import affr.project.ProjectItem;
 import affr.project.ProjectWriter;
 import affr.util.i18n.I18n;
 import java.awt.Desktop;
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -306,7 +306,7 @@ public final class ProjectController {
   }
 
   private void onOpenInFinder(AFFrCalculation cal) {
-    File dir = cal.path().toFile();
+    java.io.File dir = PathFx.toFile(cal.path());
     Task<Void> task =
         new Task<>() {
           @Override

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Properties;
@@ -52,7 +53,7 @@ public final class UserPreferences {
   private @Nullable String browserViewMode;
 
   /** {@code null} means start at the workspace root. */
-  private @Nullable String browserPath;
+  private @Nullable Path browserPath;
 
   private UserPreferences(
       Path prefsFile,
@@ -62,7 +63,7 @@ public final class UserPreferences {
       double windowX,
       double windowY,
       @Nullable String browserViewMode,
-      @Nullable String browserPath) {
+      @Nullable Path browserPath) {
     this.prefsFile = prefsFile;
     this.locale = locale;
     this.windowWidth = windowWidth;
@@ -101,7 +102,7 @@ public final class UserPreferences {
         parseFiniteDouble(props.getProperty(KEY_WINDOW_X)),
         parseFiniteDouble(props.getProperty(KEY_WINDOW_Y)),
         props.getProperty(KEY_BROWSER_VIEW_MODE),
-        props.getProperty(KEY_BROWSER_PATH));
+        parsePath(props.getProperty(KEY_BROWSER_PATH)));
   }
 
   /** Returns the saved UI locale. */
@@ -169,15 +170,15 @@ public final class UserPreferences {
   }
 
   /**
-   * Returns the saved file-browser directory path as an absolute string, or {@code null} if none
-   * has been saved yet (the browser will start at the workspace root).
+   * Returns the saved file-browser directory path, or {@code null} if none has been saved yet (the
+   * browser will start at the workspace root).
    */
-  public @Nullable String browserPath() {
+  public @Nullable Path browserPath() {
     return browserPath;
   }
 
   /** Updates the in-memory browser path. Call {@link #save()} to persist the change. */
-  public void setBrowserPath(@Nullable String path) {
+  public void setBrowserPath(@Nullable Path path) {
     this.browserPath = path;
   }
 
@@ -195,7 +196,9 @@ public final class UserPreferences {
       if (Double.isFinite(windowX)) props.setProperty(KEY_WINDOW_X, String.valueOf(windowX));
       if (Double.isFinite(windowY)) props.setProperty(KEY_WINDOW_Y, String.valueOf(windowY));
       if (browserViewMode != null) props.setProperty(KEY_BROWSER_VIEW_MODE, browserViewMode);
-      if (browserPath != null) props.setProperty(KEY_BROWSER_PATH, browserPath);
+      if (browserPath != null) {
+        props.setProperty(KEY_BROWSER_PATH, browserPath.toAbsolutePath().toString());
+      }
       try (OutputStream out = Files.newOutputStream(prefsFile)) {
         props.store(out, "AFFr user preferences — do not edit while the app is running");
       }
@@ -233,6 +236,19 @@ public final class UserPreferences {
       return Double.isFinite(d) ? d : Double.NaN;
     } catch (NumberFormatException e) {
       return Double.NaN;
+    }
+  }
+
+  /**
+   * Parses a persisted path value. Returns {@code null} if the value is absent, blank, or not a
+   * syntactically valid path on this filesystem.
+   */
+  private static @Nullable Path parsePath(@Nullable String value) {
+    if (value == null || value.isBlank()) return null;
+    try {
+      return Path.of(value);
+    } catch (InvalidPathException e) {
+      return null;
     }
   }
 }

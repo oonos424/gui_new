@@ -179,13 +179,23 @@ final class UserPreferencesTest {
   @Test
   void browserPathRoundTrip(@TempDir Path dir) {
     Path file = dir.resolve("prefs.properties");
-    String savedPath = dir.resolve("workspace/subdir").toString();
+    Path savedPath = dir.resolve("workspace/subdir");
 
     UserPreferences prefs = UserPreferences.loadFrom(file);
     prefs.setBrowserPath(savedPath);
     prefs.save();
 
     assertEquals(savedPath, UserPreferences.loadFrom(file).browserPath());
+  }
+
+  @Test
+  void corruptBrowserPathYieldsNull(@TempDir Path dir) throws Exception {
+    Path file = dir.resolve("prefs.properties");
+    // NUL is illegal in path names on every supported platform; Path.of() throws
+    // InvalidPathException, which loadFrom() must swallow rather than propagate.
+    java.nio.file.Files.writeString(file, "browser.path=" + "\u0000" + "invalid\n");
+
+    assertNull(UserPreferences.loadFrom(file).browserPath());
   }
 
   @Test
@@ -206,7 +216,7 @@ final class UserPreferencesTest {
   @Test
   void allFieldsRoundTrip(@TempDir Path dir) {
     Path file = dir.resolve("prefs.properties");
-    String savedPath = dir.resolve("workspace").toString();
+    Path savedPath = dir.resolve("workspace");
 
     UserPreferences prefs = UserPreferences.loadFrom(file);
     prefs.setLocale(Locale.JAPANESE);

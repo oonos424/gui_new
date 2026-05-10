@@ -249,20 +249,13 @@ public final class TopController {
         .textProperty()
         .bind(
             Bindings.createStringBinding(
-                () -> formatBreadcrumb(vm.getCurrentPath(), rootPath), vm.currentPathProperty()));
+                () -> PathFormatting.breadcrumb(vm.getCurrentPath(), rootPath),
+                vm.currentPathProperty()));
 
     requireHeaderNavUpButton().setOnAction(e -> vm.navigateUp());
     requireHeaderNavUpButton()
         .disableProperty()
         .bind(Bindings.createBooleanBinding(vm::isAtRoot, vm.currentPathProperty()));
-  }
-
-  /** Formats a path as {@code ~/.affr} or {@code ~/.affr/relative/sub/path}. */
-  private static String formatBreadcrumb(Path current, Path root) {
-    if (current.equals(root)) {
-      return "~/.affr";
-    }
-    return "~/.affr/" + root.relativize(current);
   }
 
   private void syncLanguageMenu(Locale locale) {

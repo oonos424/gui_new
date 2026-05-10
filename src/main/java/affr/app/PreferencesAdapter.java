@@ -61,16 +61,15 @@ public final class PreferencesAdapter {
       }
     }
 
-    @Nullable String savedPathStr = prefs.browserPath();
-    if (savedPathStr != null) {
+    @Nullable Path savedPath = prefs.browserPath();
+    if (savedPath != null) {
       try {
-        Path savedPath = Path.of(savedPathStr);
         Path rootPath = dataStore.getRootPath();
         if (savedPath.startsWith(rootPath) && Files.isDirectory(savedPath)) {
           vm.setCurrentPath(savedPath);
         }
       } catch (Exception ignored) {
-        // Malformed path or IO error — keep the default root path.
+        // IO error — keep the default root path.
       }
     }
   }
@@ -122,7 +121,7 @@ public final class PreferencesAdapter {
         .currentPathProperty()
         .addListener(
             (obs, old, path) -> {
-              prefs.setBrowserPath(path.toString());
+              prefs.setBrowserPath(path);
               prefs.save();
             });
   }

@@ -155,8 +155,8 @@ final class PreferencesAdapterTest {
     Path sub = workspace.resolve("sub");
     vm.setCurrentPath(sub);
 
-    assertEquals(sub.toString(), prefs.browserPath());
-    assertEquals(sub.toString(), UserPreferences.loadFrom(prefsFile).browserPath());
+    assertEquals(sub, prefs.browserPath());
+    assertEquals(sub, UserPreferences.loadFrom(prefsFile).browserPath());
   }
 
   @Test

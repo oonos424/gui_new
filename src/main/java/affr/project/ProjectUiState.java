@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Properties;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -26,9 +27,9 @@ public final class ProjectUiState {
   private static final String KEY_CTL_LAST_DIR = "ctl.lastDir";
 
   private final Path stateFile;
-  private @Nullable String ctlLastDir;
+  private @Nullable Path ctlLastDir;
 
-  private ProjectUiState(Path stateFile, @Nullable String ctlLastDir) {
+  private ProjectUiState(Path stateFile, @Nullable Path ctlLastDir) {
     this.stateFile = stateFile;
     this.ctlLastDir = ctlLastDir;
   }
@@ -48,7 +49,7 @@ public final class ProjectUiState {
       } catch (IOException ignored) {
       }
     }
-    return new ProjectUiState(file, props.getProperty(KEY_CTL_LAST_DIR));
+    return new ProjectUiState(file, parsePath(props.getProperty(KEY_CTL_LAST_DIR)));
   }
 
   // ── Accessors ──────────────────────────────────────────────────────────────
@@ -58,12 +59,7 @@ public final class ProjectUiState {
    * *.ctl}) for this project, or {@code null} if none has been recorded yet.
    */
   public @Nullable Path getCtlLastDir() {
-    if (ctlLastDir == null) return null;
-    try {
-      return Path.of(ctlLastDir);
-    } catch (Exception ignored) {
-      return null;
-    }
+    return ctlLastDir;
   }
 
   /**
@@ -71,7 +67,7 @@ public final class ProjectUiState {
    * #save()} to persist the change.
    */
   public void setCtlLastDir(Path dir) {
-    this.ctlLastDir = dir.toAbsolutePath().toString();
+    this.ctlLastDir = dir.toAbsolutePath();
   }
 
   // ── Persistence ────────────────────────────────────────────────────────────
@@ -82,11 +78,26 @@ public final class ProjectUiState {
   public void save() {
     try {
       Properties props = new Properties();
-      if (ctlLastDir != null) props.setProperty(KEY_CTL_LAST_DIR, ctlLastDir);
+      if (ctlLastDir != null) {
+        props.setProperty(KEY_CTL_LAST_DIR, ctlLastDir.toAbsolutePath().toString());
+      }
       try (OutputStream out = Files.newOutputStream(stateFile)) {
         props.store(out, "AFFr project UI state — safe to delete");
       }
     } catch (IOException ignored) {
+    }
+  }
+
+  /**
+   * Parses a persisted path value. Returns {@code null} if the value is absent, blank, or not a
+   * syntactically valid path on this filesystem.
+   */
+  private static @Nullable Path parsePath(@Nullable String value) {
+    if (value == null || value.isBlank()) return null;
+    try {
+      return Path.of(value);
+    } catch (InvalidPathException e) {
+      return null;
     }
   }
 }
