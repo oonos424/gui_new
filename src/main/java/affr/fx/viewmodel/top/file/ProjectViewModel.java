@@ -18,6 +18,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * {@link SortedList} view of that list driven by a {@link ProjectSortOrder} property, and an
  * observable focused-item selection.
  *
+ * <p>Owns the per-view-session focused-item selection, which is presentation state (which item the
+ * user is currently looking at) and intentionally not part of {@link AFFrProject}. Two ViewModels
+ * over the same project may therefore track focus independently.
+ *
  * <p>This class holds no widget references and no FXML knowledge.
  *
  * <p>Transient focused-item state is not persisted in this phase; it will be restored from {@code
@@ -38,7 +42,8 @@ public final class ProjectViewModel {
   /**
    * Creates a ViewModel backed by {@code project}. The item list is copied from the model into a
    * new {@link ObservableList}; subsequent mutations go through this ViewModel, not the model. The
-   * sort order starts at {@link ProjectSortOrder#DATE_DESC}.
+   * sort order starts at {@link ProjectSortOrder#DATE_DESC} and the focused item starts at {@code
+   * null}.
    */
   public ProjectViewModel(AFFrProject project) {
     this.project = project;

@@ -1,18 +1,14 @@
 package affr.app.top.file;
 
 import affr.data.BrowserEntry;
-import affr.data.DataStore;
 import affr.data.FolderEntry;
 import affr.data.ProjectEntry;
 import affr.fx.viewmodel.top.file.FileBrowserViewMode;
 import affr.fx.viewmodel.top.file.FileBrowserViewModel;
 import affr.util.i18n.I18n;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import javafx.collections.ListChangeListener;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -41,6 +37,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * FXML controller for the File-browser content area (FILE category).
+ *
+ * <p>Pure widget code: all IO and threading lives in {@link FileBrowserViewModel}. The controller
+ * only translates user gestures into VM method calls and reflects VM property changes back into the
+ * scene graph.
  *
  * <p>Supports three display modes controlled by {@link FileBrowserViewMode}:
  *
@@ -73,9 +73,6 @@ public final class FileBrowserController {
 
   private @Nullable FileBrowserViewModel viewModel;
 
-  // Auto-select this entry name after the next directory reload.
-  private @Nullable String pendingSelectName;
-
   // The icon tile currently highlighted in ICON mode.
   private @Nullable Node currentIconTile;
 
@@ -86,7 +83,6 @@ public final class FileBrowserController {
 
   @FXML
   private void initialize() {
-    // List-view cell factory
     requireItemList()
         .setCellFactory(
             lv ->
@@ -112,7 +108,6 @@ public final class FileBrowserController {
                   }
                 });
 
-    // Double-click in list view
     requireItemList()
         .setOnMouseClicked(
             event -> {
@@ -120,14 +115,13 @@ public final class FileBrowserController {
                 BrowserEntry selected = requireItemList().getSelectionModel().getSelectedItem();
                 if (selected != null) {
                   switch (selected) {
-                    case FolderEntry f -> navigateTo(f.path());
+                    case FolderEntry f -> requireViewModel().navigateTo(f.path());
                     case ProjectEntry p -> requireViewModel().setOpeningProject(p);
                   }
                 }
               }
             });
 
-    // Tree-view cell factory
     requireTreeView()
         .setCellFactory(
             tv ->
@@ -197,7 +191,6 @@ public final class FileBrowserController {
         .selectedItemProperty()
         .addListener((obs, old, sel) -> viewModel.setSelectedItem(sel));
 
-    // Tree view: selection → ViewModel; double-click on project → open
     requireTreeView()
         .getSelectionModel()
         .selectedItemProperty()
@@ -206,7 +199,6 @@ public final class FileBrowserController {
               if (treeItem != null) {
                 BrowserEntry entry = treeItem.getValue();
                 viewModel.setSelectedItem(entry);
-                // Keep currentPath in sync so New Project uses the selected folder's path.
                 if (entry instanceof FolderEntry f) {
                   viewModel.setCurrentPath(f.path());
                 }
@@ -224,13 +216,11 @@ public final class FileBrowserController {
                 if (item != null && item.getValue() instanceof ProjectEntry p) {
                   viewModel.setOpeningProject(p);
                 }
-                // FolderEntry double-click: tree's default expand/collapse handles it.
               }
             });
 
     // ── View-mode wiring ───────────────────────────────────────────────────
 
-    // ToggleButton → ViewModel
     viewModeGroup
         .selectedToggleProperty()
         .addListener(
@@ -245,12 +235,31 @@ public final class FileBrowserController {
               }
             });
 
-    // ViewModel → toggle buttons + content swap
     viewModel.viewModeProperty().addListener((obs, old, mode) -> applyViewMode(mode));
 
-    // Sync initial state
     syncToggleToViewMode(viewModel.getViewMode());
     applyViewMode(viewModel.getViewMode());
+
+    // ── Pending selection after a post-create reload ───────────────────────
+    viewModel
+        .pendingSelectNameProperty()
+        .addListener(
+            (obs, old, name) -> {
+              if (name == null) return;
+              applyPendingSelection(name);
+              viewModel.clearPendingSelectName();
+            });
+
+    // ── Error channel: show alert for create failures ──────────────────────
+    viewModel
+        .errorProperty()
+        .addListener(
+            (obs, old, err) -> {
+              if (err != null) {
+                showErrorAlert(err);
+                viewModel.clearError();
+              }
+            });
 
     // ── New-project button label ───────────────────────────────────────────
     requireNewProjectButton().setText(I18n.get("browser.newProjectButton"));
@@ -259,19 +268,7 @@ public final class FileBrowserController {
             (obs, old, bundle) ->
                 requireNewProjectButton().setText(I18n.get("browser.newProjectButton")));
 
-    navigateTo(viewModel.getCurrentPath());
-  }
-
-  /**
-   * Navigates up to the parent directory (clamped to the workspace root).
-   *
-   * <p>Called by the app header's Up button, wired by {@link affr.app.top.TopController}.
-   */
-  public void navigateUp() {
-    FileBrowserViewModel vm = requireViewModel();
-    if (!vm.isAtRoot()) {
-      navigateTo(vm.parentPath());
-    }
+    viewModel.navigateTo(viewModel.getCurrentPath());
   }
 
   // ── View-mode switching ────────────────────────────────────────────────────
@@ -315,40 +312,38 @@ public final class FileBrowserController {
   private void initTreeView() {
     TreeView<BrowserEntry> tree = requireTreeView();
     if (tree.getRoot() != null) {
-      return; // Already built — preserve expanded state across mode switches.
+      return;
     }
 
-    DataStore ds = requireViewModel().getDataStore();
-    Path rootPath = ds.getRootPath();
+    FileBrowserViewModel vm = requireViewModel();
+    Path rootPath = vm.getRootPath();
     @Nullable Path rootFileName = rootPath.getFileName();
     String rootName = rootFileName != null ? rootFileName.toString() : rootPath.toString();
 
-    LazyTreeItem root = new LazyTreeItem(new FolderEntry(rootPath, rootName), ds);
+    LazyTreeItem root = new LazyTreeItem(new FolderEntry(rootPath, rootName), vm);
     tree.setRoot(root);
-    root.setExpanded(true); // Immediately loads the workspace root's children.
+    root.setExpanded(true);
   }
 
   /**
-   * A {@link TreeItem} that loads its children from disk on first expansion. The loading happens on
-   * a background thread; children are populated on the JavaFX Application Thread once ready.
-   *
-   * <p>Projects are always leaves. Folders show the expand arrow until clicked; if a folder turns
-   * out to be empty, the expansion simply shows nothing.
+   * A {@link TreeItem} that loads its children via {@link FileBrowserViewModel#loadChildrenAsync}
+   * on first expansion. Projects are always leaves.
    */
   private static final class LazyTreeItem extends TreeItem<BrowserEntry> {
 
+    private final FileBrowserViewModel vm;
     private boolean loaded = false;
 
-    LazyTreeItem(BrowserEntry entry, DataStore dataStore) {
+    LazyTreeItem(BrowserEntry entry, FileBrowserViewModel vm) {
       super(entry);
+      this.vm = vm;
       if (!(entry instanceof ProjectEntry)) {
-        // Trigger a background load whenever this node is expanded for the first time.
         expandedProperty()
             .addListener(
                 (obs, wasExpanded, isExpanded) -> {
                   if (Boolean.TRUE.equals(isExpanded) && !loaded) {
                     loaded = true;
-                    loadChildrenAsync(dataStore);
+                    loadChildren();
                   }
                 });
       }
@@ -356,47 +351,30 @@ public final class FileBrowserController {
 
     @Override
     public boolean isLeaf() {
-      // Projects never have sub-items in the browser tree.
       return getValue() instanceof ProjectEntry;
     }
 
     /**
-     * Clears current children and reloads from disk. Used after creating a new project inside this
-     * folder so the tree reflects the change without collapsing unrelated nodes.
+     * Clears current children and reloads. Used after creating a new project inside this folder so
+     * the tree reflects the change without collapsing unrelated nodes.
      */
-    void reload(DataStore dataStore) {
-      loaded = true; // Prevent the expansion listener from triggering a second load.
+    void reload() {
+      loaded = true;
       getChildren().clear();
-      loadChildrenAsync(dataStore);
+      loadChildren();
     }
 
-    private void loadChildrenAsync(DataStore dataStore) {
+    private void loadChildren() {
       Path path = getValue().path();
-
-      Task<List<BrowserEntry>> task =
-          new Task<>() {
-            @Override
-            protected List<BrowserEntry> call() throws Exception {
-              return dataStore.loadChildren(path);
-            }
-          };
-
-      task.setOnSucceeded(
-          e -> {
-            @Nullable List<BrowserEntry> children = task.getValue();
-            if (children != null) {
+      vm.loadChildrenAsync(
+          path,
+          (children, err) -> {
+            if (err == null) {
               getChildren()
-                  .setAll(
-                      children.stream().map(child -> new LazyTreeItem(child, dataStore)).toList());
+                  .setAll(children.stream().map(child -> new LazyTreeItem(child, vm)).toList());
             }
+            // On error: leave children empty; the expand arrow stays but shows nothing.
           });
-
-      task.setOnFailed(
-          e -> {
-            // Leave children empty; the expand arrow stays but shows nothing.
-          });
-
-      Thread.ofVirtual().name("affr-tree-loader").start(task);
     }
   }
 
@@ -441,7 +419,7 @@ public final class FileBrowserController {
           selectIconTile(tile, entry);
           if (event.getClickCount() == 2) {
             switch (entry) {
-              case FolderEntry f -> navigateTo(f.path());
+              case FolderEntry f -> requireViewModel().navigateTo(f.path());
               case ProjectEntry p -> requireViewModel().setOpeningProject(p);
             }
           }
@@ -469,72 +447,8 @@ public final class FileBrowserController {
     }
 
     FileBrowserViewModel vm = requireViewModel();
-    DataStore ds = vm.getDataStore();
     Path currentPath = vm.getCurrentPath();
-
-    Task<ProjectEntry> task =
-        new Task<>() {
-          @Override
-          protected ProjectEntry call() throws Exception {
-            return ds.createProject(currentPath, params.name(), params.memo());
-          }
-        };
-
-    task.setOnSucceeded(
-        e -> {
-          @Nullable ProjectEntry created = task.getValue();
-          pendingSelectName = created != null ? created.name() : null;
-          if (vm.getViewMode() == FileBrowserViewMode.TREE) {
-            // In tree mode, refresh the selected folder's subtree instead of the flat list.
-            refreshTreeNodeForPath(currentPath);
-          } else {
-            navigateTo(currentPath);
-          }
-        });
-
-    task.setOnFailed(
-        e -> {
-          @Nullable Throwable ex = task.getException();
-          String message = ex != null ? ex.getMessage() : I18n.get("dialog.error.title");
-          Alert alert = new Alert(Alert.AlertType.ERROR);
-          alert.setTitle(I18n.get("dialog.error.title"));
-          alert.setContentText(message != null ? message : "");
-          alert.showAndWait();
-        });
-
-    Thread.ofVirtual().name("affr-project-creator").start(task);
-  }
-
-  /**
-   * Reloads the children of the {@link LazyTreeItem} whose path matches {@code dirPath}. This
-   * refreshes the tree in-place after a project is created without collapsing the rest of the tree.
-   */
-  private void refreshTreeNodeForPath(Path dirPath) {
-    TreeView<BrowserEntry> tree = requireTreeView();
-    @Nullable TreeItem<BrowserEntry> root = tree.getRoot();
-    if (root == null) return;
-
-    @Nullable LazyTreeItem target = findTreeItem(root, dirPath);
-    if (target != null) {
-      target.reload(requireViewModel().getDataStore());
-    }
-    // Auto-select the new project after the reload completes (handled inside reload()).
-    pendingSelectName = null; // reload() will do its own selection
-  }
-
-  /**
-   * Finds the {@link LazyTreeItem} in the subtree rooted at {@code node} whose entry path equals
-   * {@code targetPath}, or {@code null} if not found.
-   */
-  private @Nullable LazyTreeItem findTreeItem(TreeItem<BrowserEntry> node, Path targetPath) {
-    if (node.getValue().path().equals(targetPath) && node instanceof LazyTreeItem lti) {
-      return lti;
-    }
-    for (TreeItem<BrowserEntry> child : node.getChildren()) {
-      @Nullable LazyTreeItem found = findTreeItem(child, targetPath);
-      if (found != null) return found;
-    }
-    return null;
+    vm.createProject(currentPath, params.name(), params.memo());
   }
 
   private @Nullable NewProjectParams showNewProjectDialog() {
@@ -581,49 +495,60 @@ public final class FileBrowserController {
 
   private record NewProjectParams(String name, String memo) {}
 
-  // ── Navigation ────────────────────────────────────────────────────────────
+  // ── Pending-selection / error helpers ─────────────────────────────────────
 
-  private void navigateTo(Path path) {
+  /**
+   * Applies a pending selection to the appropriate widget for the active view mode.
+   *
+   * <p>In LIST and ICON modes the focus goes to the entry in {@code vm.getItems()} matching {@code
+   * name}. In TREE mode the entry was created inside the current path: refresh that subtree node so
+   * the new project becomes visible.
+   */
+  private void applyPendingSelection(String name) {
     FileBrowserViewModel vm = requireViewModel();
-    vm.setLoading(true);
-    vm.setCurrentPath(path);
-    vm.getItems().clear();
-    requireEmptyLabel().setVisible(false);
+    if (vm.getViewMode() == FileBrowserViewMode.TREE) {
+      refreshTreeNodeForPath(vm.getCurrentPath());
+      return;
+    }
+    vm.getItems().stream()
+        .filter(entry -> entry.name().equals(name))
+        .findFirst()
+        .ifPresent(entry -> requireItemList().getSelectionModel().select(entry));
+  }
 
-    Task<List<BrowserEntry>> task =
-        new Task<>() {
-          @Override
-          protected List<BrowserEntry> call() throws Exception {
-            return vm.getDataStore().loadChildren(path);
-          }
-        };
+  /**
+   * Reloads the children of the {@link LazyTreeItem} whose path matches {@code dirPath}. This
+   * refreshes the tree in-place after a project is created without collapsing the rest of the tree.
+   */
+  private void refreshTreeNodeForPath(Path dirPath) {
+    TreeView<BrowserEntry> tree = requireTreeView();
+    @Nullable TreeItem<BrowserEntry> root = tree.getRoot();
+    if (root == null) return;
 
-    task.setOnSucceeded(
-        e -> {
-          List<BrowserEntry> loaded = task.getValue();
-          vm.setItems(loaded != null ? loaded : List.of());
-          vm.setLoading(false);
-          requireEmptyLabel().setVisible(vm.getItems().isEmpty());
+    @Nullable LazyTreeItem target = findTreeItem(root, dirPath);
+    if (target != null) {
+      target.reload();
+    }
+  }
 
-          @Nullable String nameToSelect = pendingSelectName;
-          pendingSelectName = null;
-          if (nameToSelect != null) {
-            final String target = nameToSelect;
-            vm.getItems().stream()
-                .filter(entry -> entry.name().equals(target))
-                .findFirst()
-                .ifPresent(entry -> requireItemList().getSelectionModel().select(entry));
-          }
-        });
+  private @Nullable LazyTreeItem findTreeItem(TreeItem<BrowserEntry> node, Path targetPath) {
+    if (node.getValue().path().equals(targetPath) && node instanceof LazyTreeItem lti) {
+      return lti;
+    }
+    for (TreeItem<BrowserEntry> child : node.getChildren()) {
+      @Nullable LazyTreeItem found = findTreeItem(child, targetPath);
+      if (found != null) return found;
+    }
+    return null;
+  }
 
-    task.setOnFailed(
-        e -> {
-          vm.setItems(Collections.emptyList());
-          vm.setLoading(false);
-          requireEmptyLabel().setVisible(true);
-        });
-
-    Thread.ofVirtual().name("affr-data-loader").start(task);
+  private static void showErrorAlert(Throwable err) {
+    @Nullable String raw = err.getMessage();
+    String message = raw != null ? raw : I18n.get("dialog.error.title");
+    Alert alert = new Alert(Alert.AlertType.ERROR);
+    alert.setTitle(I18n.get("dialog.error.title"));
+    alert.setContentText(message);
+    alert.showAndWait();
   }
 
   // ── Null-guard helpers ────────────────────────────────────────────────────
