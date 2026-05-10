@@ -189,6 +189,20 @@ public final class AFFrNamelistMulti extends AFFrNamelist {
   }
 
   /**
+   * Removes all instances and fires one structure-listener notification per removed instance.
+   *
+   * <p>Listener registrations on the namelist itself are preserved. Used by {@link
+   * AFFrInput#reload(java.nio.file.Path)} to reset the instance set before re-parsing.
+   */
+  public void clearInstances() {
+    List<String> keys = List.copyOf(nmlistData.keySet());
+    for (String key : keys) {
+      nmlistData.remove(key);
+      fireNamelistListeners();
+    }
+  }
+
+  /**
    * Returns an ordered snapshot of all current instance keys. The order reflects insertion order
    * (iteration order of the underlying {@link java.util.HashMap} is not guaranteed; callers that
    * need stable ordering should sort externally).

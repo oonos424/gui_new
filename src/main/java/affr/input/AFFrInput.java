@@ -1,6 +1,12 @@
 package affr.input;
 
 import affr.project.AFFrCalculationModel;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -115,7 +121,7 @@ public final class AFFrInput {
     this.linesOfInput = List.copyOf(linesOfInput);
   }
 
-  // ── Factory — empty defaults ───────────────────────────────────────────────
+  // ── Factories ─────────────────────────────────────────────────────────────
 
   /**
    * Creates an {@code AFFrInput} pre-populated with all standard namelists (singles and multis) but
@@ -135,6 +141,56 @@ public final class AFFrInput {
       multis.put(name, new AFFrNamelistMulti(name));
     }
     return new AFFrInput(singles, multis, model, List.of());
+  }
+
+  /**
+   * Reads {@code ctlFile} and returns a fully populated {@code AFFrInput}.
+   *
+   * <p>Initialization sequence:
+   *
+   * <ol>
+   *   <li>Build empty namelist maps.
+   *   <li>Parse the file via {@link CtlParser#populate}.
+   *   <li>Translate to GUI format (no-op stub — translation rules are added per-field when
+   *       required).
+   *   <li>Fire all value listeners so that any already-registered binding components receive the
+   *       initial values.
+   * </ol>
+   *
+   * <p>The file is read as UTF-8. If that fails with a {@link MalformedInputException} (e.g. the
+   * solver wrote the file using MS932 on Japanese Windows), reading is retried with the JVM default
+   * charset.
+   *
+   * @param ctlFile path to the {@code fflow.ctl} file
+   * @param model the physics model selection for this calculation
+   * @return the populated model
+   * @throws IOException if the file cannot be read
+   */
+  public static AFFrInput loadFromFile(Path ctlFile, AFFrCalculationModel model)
+      throws IOException {
+    String content = readContent(ctlFile);
+    List<String> lines = List.of(content.split("\n", -1));
+
+    Map<String, AFFrNamelistSingle> singles = new HashMap<>();
+    for (String name : SINGLE_NAMELIST_NAMES) {
+      singles.put(name, new AFFrNamelistSingle(name));
+    }
+    Map<String, AFFrNamelistMulti> multis = new HashMap<>();
+    for (String name : MULTI_NAMELIST_NAMES) {
+      multis.put(name, new AFFrNamelistMulti(name));
+    }
+
+    AFFrInput input = new AFFrInput(singles, multis, model, lines);
+
+    // Step 2: load values
+    CtlParser.populate(input, content);
+
+    // Step 3: translate to GUI format (no-op stub — add per-field rules here when needed)
+
+    // Step 5: fire all notifications
+    input.fireAllValueListeners();
+
+    return input;
   }
 
   // ── Namelist accessors ────────────────────────────────────────────────────
@@ -235,6 +291,59 @@ public final class AFFrInput {
     }
     for (AFFrNamelistMulti m : nmlistMultis.values()) {
       m.fireAllValueListeners();
+    }
+  }
+
+  /**
+   * Reloads this model in-place from {@code ctlFile}.
+   *
+   * <p>Listener registrations are preserved throughout — bound widgets remain attached and
+   * automatically refresh when the final {@link #fireAllValueListeners()} call runs.
+   *
+   * <p>Reload sequence:
+   *
+   * <ol>
+   *   <li>Clear all field values from every namelist instance.
+   *   <li>Clear all instances from every multi-instance namelist (fires structure listeners).
+   *   <li>Re-parse the file via {@link CtlParser#populate}.
+   *   <li>Translate to GUI format (no-op stub).
+   *   <li>Fire all value listeners.
+   * </ol>
+   *
+   * @param ctlFile path to the {@code fflow.ctl} file to reload
+   * @throws IOException if the file cannot be read
+   */
+  public void reload(Path ctlFile) throws IOException {
+    String content = readContent(ctlFile);
+
+    // Step 1: clear values
+    clearAllValues();
+
+    // Step 2: clear multi-namelist instances
+    for (AFFrNamelistMulti m : nmlistMultis.values()) {
+      m.clearInstances();
+    }
+
+    // Step 3: re-parse
+    CtlParser.populate(this, content);
+
+    // Step 4: translate to GUI format (no-op stub)
+
+    // Step 5: fire all notifications
+    fireAllValueListeners();
+  }
+
+  // ── I/O helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Reads {@code path} as UTF-8, retrying with the JVM default charset on {@link
+   * MalformedInputException}.
+   */
+  private static String readContent(Path path) throws IOException {
+    try {
+      return Files.readString(path, StandardCharsets.UTF_8);
+    } catch (MalformedInputException e) {
+      return Files.readString(path, Charset.defaultCharset());
     }
   }
 }
