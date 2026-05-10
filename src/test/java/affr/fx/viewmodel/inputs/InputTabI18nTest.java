@@ -36,6 +36,12 @@ final class InputTabI18nTest {
           "inputEditor.header.confirmSettings",
           "inputEditor.header.menu");
 
+  /**
+   * Menu item keys defined in {@code messages*.properties}. Must stay in sync with both bundles.
+   */
+  private static final List<String> MENU_KEYS =
+      List.of("inputEditor.menu.setting", "inputEditor.menu.about", "inputEditor.menu.language");
+
   @AfterEach
   void resetLocale() {
     I18n.setLocale(Locale.ENGLISH);
@@ -84,6 +90,18 @@ final class InputTabI18nTest {
     for (Locale locale : List.of(Locale.ENGLISH, Locale.JAPANESE)) {
       I18n.setLocale(locale);
       for (String key : HEADER_KEYS) {
+        String value = I18n.get(key);
+        assertNotNull(value, () -> key + " resolved to null in " + locale);
+        assertEquals(false, value.isEmpty(), () -> key + " is empty in " + locale);
+      }
+    }
+  }
+
+  @Test
+  void everyMenuItemKeyResolvesInBothLocales() {
+    for (Locale locale : List.of(Locale.ENGLISH, Locale.JAPANESE)) {
+      I18n.setLocale(locale);
+      for (String key : MENU_KEYS) {
         String value = I18n.get(key);
         assertNotNull(value, () -> key + " resolved to null in " + locale);
         assertEquals(false, value.isEmpty(), () -> key + " is empty in " + locale);

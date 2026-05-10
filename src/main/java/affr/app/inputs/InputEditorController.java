@@ -1,5 +1,6 @@
 package affr.app.inputs;
 
+import affr.app.LanguageMenu;
 import affr.fx.viewmodel.inputs.InputTab;
 import affr.project.AFFrCalculation;
 import affr.project.AFFrCalculationModel;
@@ -10,7 +11,10 @@ import java.util.Map;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -69,6 +73,13 @@ public final class InputEditorController {
   @FXML private @Nullable Button confirmSettingsButton;
   @FXML private @Nullable MenuButton menuButton;
 
+  // Header — right menu items (Setting / About are placeholders mirroring the shell menu)
+  @FXML private @Nullable MenuItem settingMenuItem;
+  @FXML private @Nullable MenuItem aboutMenuItem;
+  @FXML private @Nullable Menu languageMenu;
+  @FXML private @Nullable RadioMenuItem langEnItem;
+  @FXML private @Nullable RadioMenuItem langJaItem;
+
   // ── State (set by init()) ─────────────────────────────────────────────────
 
   private @Nullable AFFrCalculation calculation;
@@ -110,6 +121,8 @@ public final class InputEditorController {
 
     requireBackButton().setOnAction(e -> onBack.run());
     requireHomeButton().setOnAction(e -> onHome.run());
+
+    LanguageMenu.install(requireLangEnItem(), requireLangJaItem());
 
     populateTabs(calculation.getModel());
 
@@ -191,6 +204,21 @@ public final class InputEditorController {
     return Collections.unmodifiableMap(tabButtonByInputTab);
   }
 
+  /** Package-private accessor for the menu button (used by tests to inspect menu items). */
+  MenuButton menuButtonNode() {
+    return requireMenuButton();
+  }
+
+  /** Package-private accessor for the English language radio item (used by tests). */
+  RadioMenuItem langEnItemNode() {
+    return requireLangEnItem();
+  }
+
+  /** Package-private accessor for the Japanese language radio item (used by tests). */
+  RadioMenuItem langJaItemNode() {
+    return requireLangJaItem();
+  }
+
   /** Re-resolves every tab button's label after a locale change. */
   private void refreshTabLabels() {
     for (Map.Entry<InputTab, ToggleButton> entry : tabButtonByInputTab.entrySet()) {
@@ -209,6 +237,9 @@ public final class InputEditorController {
     requireEditSubroutineButton().setText(I18n.get("inputEditor.header.editSubroutine"));
     requireConfirmSettingsButton().setText(I18n.get("inputEditor.header.confirmSettings"));
     requireMenuButton().setText(I18n.get("inputEditor.header.menu"));
+    requireSettingMenuItem().setText(I18n.get("inputEditor.menu.setting"));
+    requireAboutMenuItem().setText(I18n.get("inputEditor.menu.about"));
+    requireLanguageMenu().setText(I18n.get("inputEditor.menu.language"));
   }
 
   // ── Null-guard helpers ────────────────────────────────────────────────────
@@ -271,5 +302,35 @@ public final class InputEditorController {
     MenuButton b = menuButton;
     if (b == null) throw new IllegalStateException("menuButton not injected");
     return b;
+  }
+
+  private MenuItem requireSettingMenuItem() {
+    MenuItem m = settingMenuItem;
+    if (m == null) throw new IllegalStateException("settingMenuItem not injected");
+    return m;
+  }
+
+  private MenuItem requireAboutMenuItem() {
+    MenuItem m = aboutMenuItem;
+    if (m == null) throw new IllegalStateException("aboutMenuItem not injected");
+    return m;
+  }
+
+  private Menu requireLanguageMenu() {
+    Menu m = languageMenu;
+    if (m == null) throw new IllegalStateException("languageMenu not injected");
+    return m;
+  }
+
+  private RadioMenuItem requireLangEnItem() {
+    RadioMenuItem r = langEnItem;
+    if (r == null) throw new IllegalStateException("langEnItem not injected");
+    return r;
+  }
+
+  private RadioMenuItem requireLangJaItem() {
+    RadioMenuItem r = langJaItem;
+    if (r == null) throw new IllegalStateException("langJaItem not injected");
+    return r;
   }
 }
