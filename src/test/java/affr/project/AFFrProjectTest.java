@@ -1,22 +1,23 @@
 package affr.project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import javafx.collections.ListChangeListener;
 import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link AFFrProject}.
  *
- * <p>JavaFX properties ({@link javafx.beans.property.SimpleObjectProperty}, {@link
- * javafx.collections.FXCollections#observableArrayList}) work without the JavaFX Application Thread
- * for plain reads, writes, and listener notifications, so no TestFX is required.
+ * <p>JavaFX collections ({@link javafx.collections.FXCollections#observableArrayList}) work without
+ * the JavaFX Application Thread for plain reads, writes, and listener notifications, so no TestFX
+ * is required.
+ *
+ * <p>Per-view-session selection state (the focused item) lives in {@code ProjectViewModel} and is
+ * covered by {@code ProjectViewModelTest}; it is intentionally not part of {@code AFFrProject}.
  */
 final class AFFrProjectTest {
 
@@ -53,49 +54,6 @@ final class AFFrProjectTest {
 
     assertEquals(1, p.getItems().size());
     assertSame(item, p.getItems().get(0));
-  }
-
-  // ── Focused item ──────────────────────────────────────────────────────────
-
-  @Test
-  void focusedItemIsNullInitially() {
-    AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of());
-    assertNull(p.getFocusedItem());
-    assertNull(p.focusedItemProperty().get());
-  }
-
-  @Test
-  void setFocusedItemUpdatesProperty() {
-    CalculationItem item = makeCalItem();
-    AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of(item));
-
-    p.setFocusedItem(item);
-
-    assertSame(item, p.getFocusedItem());
-    assertSame(item, p.focusedItemProperty().get());
-  }
-
-  @Test
-  void focusedItemCanBeResetToNull() {
-    CalculationItem item = makeCalItem();
-    AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of(item));
-    p.setFocusedItem(item);
-
-    p.setFocusedItem(null);
-
-    assertNull(p.getFocusedItem());
-  }
-
-  @Test
-  void focusedItemListenerFiresOnChange() {
-    AFFrProject p = new AFFrProject("p", PROJ_PATH, "", List.of());
-    AtomicInteger calls = new AtomicInteger();
-    p.focusedItemProperty().addListener((obs, o, n) -> calls.incrementAndGet());
-
-    p.setFocusedItem(makeCalItem());
-    p.setFocusedItem(null);
-
-    assertEquals(2, calls.get());
   }
 
   // ── Observable list ───────────────────────────────────────────────────────

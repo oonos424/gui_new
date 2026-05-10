@@ -14,6 +14,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * {@link ProjectSortOrder} property. Changing the sort order re-sorts the list live — no reload
  * needed.
  *
+ * <p>Owns the per-view-session focused-item selection, which is presentation state (which item the
+ * user is currently looking at) and intentionally not part of {@link AFFrProject}. Two ViewModels
+ * over the same project may therefore track focus independently.
+ *
  * <p>This class holds no widget references and no FXML knowledge.
  */
 public final class ProjectViewModel {
@@ -22,10 +26,12 @@ public final class ProjectViewModel {
   private final SortedList<ProjectItem> sortedItems;
   private final ObjectProperty<ProjectSortOrder> sortOrder =
       new SimpleObjectProperty<>(ProjectSortOrder.DATE_DESC);
+  private final ObjectProperty<@Nullable ProjectItem> focusedItem =
+      new SimpleObjectProperty<>(null);
 
   /**
    * Creates a ViewModel backed by {@code project}. The sort order starts at {@link
-   * ProjectSortOrder#DATE_DESC}.
+   * ProjectSortOrder#DATE_DESC} and the focused item starts at {@code null}.
    */
   public ProjectViewModel(AFFrProject project) {
     this.project = project;
@@ -70,17 +76,18 @@ public final class ProjectViewModel {
     return project.getMemo();
   }
 
-  // ── Focused item (forwarded from AFFrProject) ─────────────────────────────
+  // ── Focused item ──────────────────────────────────────────────────────────
 
+  /** Observable property for the currently focused item; {@code null} when nothing is selected. */
   public ObjectProperty<@Nullable ProjectItem> focusedItemProperty() {
-    return project.focusedItemProperty();
+    return focusedItem;
   }
 
   public @Nullable ProjectItem getFocusedItem() {
-    return project.getFocusedItem();
+    return focusedItem.get();
   }
 
   public void setFocusedItem(@Nullable ProjectItem item) {
-    project.setFocusedItem(item);
+    focusedItem.set(item);
   }
 }

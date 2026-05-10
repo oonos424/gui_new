@@ -5,14 +5,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import affr.app.top.file.FileBrowserController;
 import affr.data.DataStore;
 import affr.fx.viewmodel.top.TopCategory;
 import affr.fx.viewmodel.top.TopViewModel;
+import affr.fx.viewmodel.top.file.FileBrowserViewModel;
+import affr.project.ProjectLoader;
+import affr.util.fx.FxScheduler;
 import affr.util.prefs.UserPreferences;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -47,6 +52,19 @@ final class TopControllerTest {
   @Start
   @SuppressWarnings("unchecked")
   void start(Stage stage) throws Exception {
+    // Build the file-browser sub-view (root + controller) — TopController needs both.
+    DataStore dataStore = new DataStore(UserPreferences.APP_DIR);
+    FileBrowserViewModel fbVm =
+        new FileBrowserViewModel(dataStore, new ProjectLoader(), FxScheduler.defaultInstance());
+    URL fbFxml =
+        Objects.requireNonNull(
+            FileBrowserController.class.getResource("FileBrowserController.fxml"),
+            "FileBrowserController.fxml not found on classpath");
+    FXMLLoader fbLoader = new FXMLLoader(fbFxml);
+    Node fbNode = fbLoader.load();
+    FileBrowserController fbController = fbLoader.getController();
+    fbController.init(fbVm);
+
     URL fxml =
         Objects.requireNonNull(
             TopController.class.getResource("TopController.fxml"),
@@ -56,8 +74,7 @@ final class TopControllerTest {
 
     controller = loader.getController();
     viewModel = new TopViewModel();
-    DataStore dataStore = new DataStore(UserPreferences.APP_DIR);
-    controller.init(viewModel, UserPreferences.load(), dataStore);
+    controller.init(viewModel, fbVm, fbNode);
 
     categoryList = (ListView<TopCategory>) root.lookup("#categoryList");
     viewerPane = (StackPane) root.lookup("#viewerPane");
@@ -87,7 +104,6 @@ final class TopControllerTest {
 
     assertSame(TopCategory.FILE, categoryList.getSelectionModel().getSelectedItem());
     assertSame(TopCategory.FILE, viewModel.getSelectedCategory());
-    // FILE now shows the real file browser — viewerPane has a non-label child.
     assertFalse(viewerPane.getChildren().isEmpty(), "viewerPane should contain the file browser");
   }
 
@@ -111,7 +127,6 @@ final class TopControllerTest {
 
   @Test
   void allCategoriesRoundTripThroughTheView(FxRobot robot) {
-    // Walk every category in both directions to catch any binding that silently breaks.
     for (TopCategory c : TopCategory.values()) {
       robot.interact(() -> categoryList.getSelectionModel().select(c));
       WaitForAsyncUtils.waitForFxEvents();
@@ -132,8 +147,8 @@ final class TopControllerTest {
   /**
    * Asserts that the viewer pane contains the correct content for {@code category}.
    *
-   * <p>FILE renders the real file-browser sub-view (no placeholder label). RUNNING and TUTORIALS
-   * still render a placeholder {@link Label} with the category's i18n label text.
+   * <p>FILE renders the file-browser sub-view (no placeholder label). RUNNING and TUTORIALS render
+   * a placeholder {@link Label} with the category's i18n label text.
    */
   private static void assertViewerRendered(TopCategory category, StackPane pane) {
     if (category == TopCategory.FILE) {

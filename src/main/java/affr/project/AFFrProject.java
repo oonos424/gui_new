@@ -2,21 +2,18 @@ package affr.project;
 
 import java.nio.file.Path;
 import java.util.List;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Domain object for an AFFr project.
  *
- * <p>Holds the observable list of {@link ProjectItem}s and the transient focused-item selection.
- * Sort order is a presentation concern and lives in the ViewModel layer, not here.
+ * <p>Holds the observable list of {@link ProjectItem}s. Sort order and the focused-item selection
+ * are presentation concerns and live in the ViewModel layer, not here.
  *
- * <p>The {@link ObservableList} and {@link ObjectProperty} allow the ViewModel and View layers to
- * bind directly without polling. Both may be accessed from any thread for reads and from the JavaFX
- * Application Thread for writes that propagate to bound UI nodes.
+ * <p>The {@link ObservableList} allows the ViewModel and View layers to bind directly without
+ * polling. It may be accessed from any thread for reads and from the JavaFX Application Thread for
+ * writes that propagate to bound UI nodes.
  */
 public final class AFFrProject {
 
@@ -24,11 +21,6 @@ public final class AFFrProject {
   private final Path path;
   private final String memo;
   private final ObservableList<ProjectItem> items;
-
-  // Transient: not persisted in this phase. Focus is restored only when .current_focus
-  // persistence is implemented alongside the Input Editor.
-  private final ObjectProperty<@Nullable ProjectItem> focusedItem =
-      new SimpleObjectProperty<>(null);
 
   /**
    * Creates a project with the given metadata and initial item list.
@@ -66,20 +58,5 @@ public final class AFFrProject {
    */
   public ObservableList<ProjectItem> getItems() {
     return items;
-  }
-
-  /** Observable property for the currently focused item; {@code null} when nothing is selected. */
-  public ObjectProperty<@Nullable ProjectItem> focusedItemProperty() {
-    return focusedItem;
-  }
-
-  /** Returns the currently focused item, or {@code null} when nothing is selected. */
-  public @Nullable ProjectItem getFocusedItem() {
-    return focusedItem.get();
-  }
-
-  /** Sets the focused item. Pass {@code null} to clear the selection. */
-  public void setFocusedItem(@Nullable ProjectItem item) {
-    focusedItem.set(item);
   }
 }
