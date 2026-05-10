@@ -1,7 +1,6 @@
 package affr.app.inputs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -202,67 +201,6 @@ final class InputEditorControllerTest {
 
     assertEquals(0, backCalls.get(), "Back must not be invoked by Home");
     assertEquals(1, homeCalls.get(), "Home must invoke onHome exactly once");
-  }
-
-  // ── Menu button ──────────────────────────────────────────────────────────
-
-  @Test
-  void menuButtonContainsSettingAboutAndLanguageItems(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
-
-    var items = loaded.controller().menuButtonNode().getItems();
-    assertEquals(3, items.size(), "menu must have Setting, About, Language");
-    assertEquals("Setting", items.get(0).getText());
-    assertEquals("About", items.get(1).getText());
-    assertEquals("Language", items.get(2).getText());
-    assertTrue(
-        items.get(2) instanceof javafx.scene.control.Menu,
-        "third entry must be a Menu (the Language submenu)");
-  }
-
-  @Test
-  void englishRadioIsSelectedInitiallyForEnglishLocale(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
-
-    assertTrue(loaded.controller().langEnItemNode().isSelected());
-    assertFalse(loaded.controller().langJaItemNode().isSelected());
-  }
-
-  /**
-   * Firing the Japanese radio must switch the I18n locale and update the radio selection and the UI
-   * labels. This is the regression for the original bug report ("Menu button doesn't work") — the
-   * Language submenu is the menu's only live action and must drive the locale.
-   */
-  @Test
-  void firingJapaneseRadioSwitchesLocaleAndUpdatesLabels(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
-    ToggleButton meshButton = loaded.controller().tabButtonsByInputTab().get(InputTab.MESH);
-    assertNotNull(meshButton, "MESH tab button must exist for the default model");
-    String englishMeshText = meshButton.getText();
-
-    robot.interact(() -> loaded.controller().langJaItemNode().fire());
-    WaitForAsyncUtils.waitForFxEvents();
-
-    assertEquals(Locale.JAPANESE, I18n.getLocale());
-    assertTrue(loaded.controller().langJaItemNode().isSelected());
-    assertFalse(loaded.controller().langEnItemNode().isSelected());
-    assertNotEquals(
-        englishMeshText, meshButton.getText(), "tab labels must update after locale switch");
-  }
-
-  /**
-   * Externally-driven locale changes (e.g. from the shell menu) must keep the editor's radios in
-   * sync. Mirrors the bundle-listener wiring in {@code init()}.
-   */
-  @Test
-  void externalLocaleChangeKeepsRadiosInSync(FxRobot robot) {
-    Loaded loaded = loadEditor(robot, calculationWithDefaultModel(), () -> {}, () -> {});
-
-    robot.interact(() -> I18n.setLocale(Locale.JAPANESE));
-    WaitForAsyncUtils.waitForFxEvents();
-
-    assertTrue(loaded.controller().langJaItemNode().isSelected());
-    assertFalse(loaded.controller().langEnItemNode().isSelected());
   }
 
   // ── Locale change ────────────────────────────────────────────────────────

@@ -3,13 +3,8 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Menu?>
-<?import javafx.scene.control.MenuButton?>
-<?import javafx.scene.control.MenuItem?>
-<?import javafx.scene.control.RadioMenuItem?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -18,7 +13,7 @@
 <!--
   Input Editor shell.
 
-    HEADER (top, 50 px) — Back/Home on the left, action buttons + Menu on the right.
+    HEADER (top, 50 px) — Back/Home on the left, action buttons on the right.
     SplitPane (HORIZONTAL, divider ~600 px):
       MANAGER (left)   — TabPane with side=LEFT, vertical 30 x 110 tabs; populated at runtime.
       VIEWER  (right)  — placeholder area; the 3D mesh viewer will live here in a later phase.
@@ -28,10 +23,6 @@
     xmlns:fx="http://javafx.com/fxml"
     fx:controller="affr.app.inputs.InputEditorController"
     stylesheets="@inputs.css">
-
-  <fx:define>
-    <ToggleGroup fx:id="languageToggleGroup"/>
-  </fx:define>
 
   <!-- ── HEADER (top, 50 px) ─────────────────────────────────────────── -->
   <top>
@@ -63,21 +54,6 @@
           <Button fx:id="editSubroutineButton" styleClass="input-editor-action-button"/>
           <Separator orientation="VERTICAL"/>
           <Button fx:id="confirmSettingsButton" styleClass="input-editor-action-button"/>
-          <Separator orientation="VERTICAL"/>
-          <MenuButton fx:id="menuButton" styleClass="input-editor-menu-button">
-            <items>
-              <MenuItem fx:id="settingMenuItem" text="Setting"/>
-              <MenuItem fx:id="aboutMenuItem" text="About"/>
-              <Menu fx:id="languageMenu" text="Language">
-                <items>
-                  <RadioMenuItem fx:id="langEnItem" text="English"
-                                 toggleGroup="$languageToggleGroup"/>
-                  <RadioMenuItem fx:id="langJaItem" text="日本語"
-                                 toggleGroup="$languageToggleGroup"/>
-                </items>
-              </Menu>
-            </items>
-          </MenuButton>
         </HBox>
       </right>
 
